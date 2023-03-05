@@ -3,6 +3,7 @@ import re
 import git
 import bpy
 import time
+from blenderbim.bim.ifc import IfcStore
 
 bl_info = {
     "name": "IFC git",
@@ -125,6 +126,9 @@ class RefreshGit(bpy.types.Operator):
 
     def execute(self, context):
 
+        area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
+        area.spaces[0].shading.color_type = "MATERIAL"
+
         # ifcgit_commits is registered list widget
         context.scene.ifcgit_commits.clear()
 
@@ -160,8 +164,25 @@ class DisplayRevision(bpy.types.Operator):
         ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
-        # TODO change object colours
-        print(ifc_diff_ids(ifcgit_repo, "HEAD", item.hexsha, ifc_path))
+        step_ids = ifc_diff_ids(ifcgit_repo, "HEAD", item.hexsha, ifc_path)
+        area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
+        area.spaces[0].shading.color_type = "OBJECT"
+        file = IfcStore.get_file()
+
+        for obj in context.visible_objects:
+            if not obj.BIMObjectProperties.ifc_definition_id:
+                continue
+            element = file.by_id(obj.BIMObjectProperties.ifc_definition_id)
+            step_id = element.id()
+            if step_id in step_ids["modified"]:
+                obj.color = (0.3, 0.3, 1.0, 1)
+            elif step_id in step_ids["added"]:
+                obj.color = (0.2, 0.8, 0.2, 1)
+            elif step_id in step_ids["removed"]:
+                obj.color = (1.0, 0.2, 0.2, 1)
+            else:
+                obj.color = (1.0, 1.0, 1.0, 0.8)
+
         return {"FINISHED"}
 
 
