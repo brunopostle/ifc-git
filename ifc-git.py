@@ -3,7 +3,9 @@ import re
 import git
 import bpy
 import time
+import logging
 from blenderbim.bim.ifc import IfcStore
+from blenderbim.bim import import_ifc
 
 bl_info = {
     "name": "IFC git",
@@ -83,6 +85,7 @@ class IfcGitPanel(bpy.types.Panel):
         row = layout.row()
         row.label(text=commit.hexsha)
         row.operator("ifcgit.display_revision")
+        row.operator("ifcgit.switch_revision")
         row = layout.row()
         row.label(text=commit.message)
 
@@ -186,6 +189,43 @@ class DisplayRevision(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class SwitchRevision(bpy.types.Operator):
+    """Switches the repository to the given revision and reloads the IFC file"""
+
+    bl_label = "Switch revision"
+    bl_idname = "ifcgit.switch_revision"
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        if ifcgit_repo.is_dirty():
+            return False
+        return True
+
+    def execute(self, context):
+
+        ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        item = context.scene.ifcgit_commits[context.scene.commit_index]
+
+        ifcgit_repo.git.checkout(item.hexsha)
+
+        IfcStore.purge()
+        # delete any IfcProject/* collections
+        for collection in bpy.data.collections:
+            if re.match("^IfcProject/", collection.name):
+                delete_collection(collection)
+
+        logger = logging.getLogger("ImportIFC")
+
+        ifc_import_settings = import_ifc.IfcImportSettings.factory(
+            bpy.context, ifc_path, logger
+        )
+        ifc_importer = import_ifc.IfcImporter(ifc_import_settings)
+        ifc_importer.execute()
+
+        return {"FINISHED"}
+
+
 # FUNCTIONS
 
 
@@ -228,8 +268,13 @@ def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
     }
 
 
-# uncommitted changes?
-# repo.is_dirty()
+def delete_collection(blender_collection):
+    for obj in blender_collection.objects:
+        bpy.data.objects.remove(obj, do_unlink=True)
+    bpy.data.collections.remove(blender_collection)
+    for collection in bpy.data.collections:
+        if not collection.users:
+            bpy.data.collections.remove(collection)
 
 
 def register():
@@ -238,6 +283,7 @@ def register():
     bpy.utils.register_class(COMMIT_UL_List)
     bpy.utils.register_class(RefreshGit)
     bpy.utils.register_class(DisplayRevision)
+    bpy.utils.register_class(SwitchRevision)
     bpy.types.Scene.ifcgit_commits = bpy.props.CollectionProperty(type=ListItem)
     bpy.types.Scene.commit_index = bpy.props.IntProperty(
         name="Index for my_list", default=0
@@ -252,6 +298,7 @@ def unregister():
     bpy.utils.unregister_class(COMMIT_UL_List)
     bpy.utils.unregister_class(RefreshGit)
     bpy.utils.unregister_class(DisplayRevision)
+    bpy.utils.unregister_class(SwitchRevision)
 
 
 if __name__ == "__main__":
