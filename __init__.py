@@ -45,20 +45,26 @@ class IfcGitPanel(bpy.types.Panel):
         layout = self.layout
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-        repo = repo_from_ifc_path(path_ifc)
-        if not repo:
+        if not path_ifc:
             row = layout.row()
-            row.label(text="No Git repository found", icon="SYSTEM")
+            row.label(text="No IFC project loaded", icon="FILE_BLANK")
             return
 
         row = layout.row()
         row.label(text=os.path.basename(path_ifc), icon="FILE_BLANK")
 
         row = layout.row()
-        row.label(text=os.path.dirname(path_ifc), icon="SYSTEM")
+        row.operator("ifcgit.refresh")
+
+        if "ifcgit_repo" not in globals():
+            return
+        if not ifcgit_repo:
+            row = layout.row()
+            row.label(text="No Git repository found", icon="SYSTEM")
+            return
 
         row = layout.row()
-        row.operator("ifcgit.refresh")
+        row.label(text=os.path.dirname(path_ifc), icon="SYSTEM")
 
         row = layout.row()
         row.template_list(
@@ -70,12 +76,26 @@ class IfcGitPanel(bpy.types.Panel):
             "commit_index",
         )
 
+        item = context.scene.ifcgit_commits[context.scene.commit_index]
+        commit = ifcgit_repo.commit(rev=item.hexsha)
+
+        row = layout.row()
+        row.label(text=commit.hexsha)
+        row.operator("ifcgit.display_revision")
+        row = layout.row()
+        row.label(text=commit.message)
+
 
 class ListItem(bpy.types.PropertyGroup):
     """Group of properties representing an item in the list."""
 
     name: bpy.props.StringProperty(
         name="Name", description="A name for this item", default="Untitled"
+    )
+    hexsha: bpy.props.StringProperty(
+        name="Git hash",
+        description="checksum for this commit",
+        default="Uncommitted data!",
     )
 
 
@@ -86,7 +106,11 @@ class COMMIT_UL_List(bpy.types.UIList):
         self, context, layout, data, item, icon, active_data, active_propname, index
     ):
 
-        layout.label(text=item.name)
+        commit = ifcgit_repo.commit(rev=item.hexsha)
+        label = (
+            commit.author.name + ", " + time.asctime(time.gmtime(commit.committed_date))
+        )
+        layout.label(text=label)
 
 
 # OPERATORS
@@ -107,6 +131,10 @@ class RefreshGit(bpy.types.Operator):
         ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         repo = repo_from_ifc_path(ifc_path)
 
+        # FIXME bad bad bad
+        global ifcgit_repo
+        ifcgit_repo = repo
+
         commits = list(
             git.objects.commit.Commit.iter_items(
                 repo=repo, rev=["HEAD"], paths=[ifc_path]
@@ -115,12 +143,25 @@ class RefreshGit(bpy.types.Operator):
 
         for commit in commits:
             context.scene.ifcgit_commits.add()
-            context.scene.ifcgit_commits[-1].name = (
-                commit.author.name
-                + ", "
-                + time.asctime(time.gmtime(commit.committed_date))
-            )
+            context.scene.ifcgit_commits[-1].hexsha = commit.hexsha
 
+        return {"FINISHED"}
+
+
+class DisplayRevision(bpy.types.Operator):
+    """Colourise objects by selected revision"""
+
+    bl_label = "Show diff"
+    bl_idname = "ifcgit.display_revision"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+
+        ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        item = context.scene.ifcgit_commits[context.scene.commit_index]
+
+        # TODO change object colours
+        print(ifc_diff_ids(ifcgit_repo, "HEAD", item.hexsha, ifc_path))
         return {"FINISHED"}
 
 
@@ -157,8 +198,10 @@ def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
         if re_search:
             deleted.add(int(re_search.group(1)))
 
+    modified = inserted.intersection(deleted)
+
     return {
-        "modified": inserted.intersection(deleted),
+        "modified": modified,
         "added": inserted.difference(modified),
         "removed": deleted.difference(modified),
     }
@@ -173,6 +216,7 @@ def register():
     bpy.utils.register_class(ListItem)
     bpy.utils.register_class(COMMIT_UL_List)
     bpy.utils.register_class(RefreshGit)
+    bpy.utils.register_class(DisplayRevision)
     bpy.types.Scene.ifcgit_commits = bpy.props.CollectionProperty(type=ListItem)
     bpy.types.Scene.commit_index = bpy.props.IntProperty(
         name="Index for my_list", default=0
@@ -186,6 +230,7 @@ def unregister():
     bpy.utils.unregister_class(ListItem)
     bpy.utils.unregister_class(COMMIT_UL_List)
     bpy.utils.unregister_class(RefreshGit)
+    bpy.utils.unregister_class(DisplayRevision)
 
 
 if __name__ == "__main__":
