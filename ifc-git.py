@@ -69,6 +69,8 @@ class IfcGitPanel(bpy.types.Panel):
         row = layout.row()
         row.label(text=os.path.dirname(path_ifc), icon="SYSTEM")
 
+        # FIXME if is_dirty() no list, just show diff, commit with message, or revert
+
         row = layout.row()
         row.template_list(
             "COMMIT_UL_List",
@@ -93,9 +95,6 @@ class IfcGitPanel(bpy.types.Panel):
 class ListItem(bpy.types.PropertyGroup):
     """Group of properties representing an item in the list."""
 
-    name: bpy.props.StringProperty(
-        name="Name", description="A name for this item", default="Untitled"
-    )
     hexsha: bpy.props.StringProperty(
         name="Git hash",
         description="checksum for this commit",
@@ -110,6 +109,8 @@ class COMMIT_UL_List(bpy.types.UIList):
         self, context, layout, data, item, icon, active_data, active_propname, index
     ):
 
+        # FIXME selecting a commit should call DisplayRevision operator without Show diff button
+        # FIXME indicate HEAD and/or current revision as bold or somesuch
         commit = ifcgit_repo.commit(rev=item.hexsha)
         label = (
             commit.author.name + ", " + time.asctime(time.gmtime(commit.committed_date))
@@ -136,15 +137,14 @@ class RefreshGit(bpy.types.Operator):
         context.scene.ifcgit_commits.clear()
 
         ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-        repo = repo_from_ifc_path(ifc_path)
 
         # FIXME bad bad bad
         global ifcgit_repo
-        ifcgit_repo = repo
+        ifcgit_repo = repo_from_ifc_path(ifc_path)
 
         commits = list(
             git.objects.commit.Commit.iter_items(
-                repo=repo, rev=["HEAD"], paths=[ifc_path]
+                repo=ifcgit_repo, rev=["HEAD"], paths=[ifc_path]
             )
         )
 
@@ -167,16 +167,25 @@ class DisplayRevision(bpy.types.Operator):
         ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
-        step_ids = ifc_diff_ids(ifcgit_repo, "HEAD", item.hexsha, ifc_path)
+        selected_revision = ifcgit_repo.commit(rev=item.hexsha)
+        current_revision = ifcgit_repo.commit()
+
+        if current_revision.committed_date > selected_revision.committed_date:
+            step_ids = ifc_diff_ids(
+                ifcgit_repo, selected_revision.hexsha, current_revision.hexsha, ifc_path
+            )
+        else:
+            step_ids = ifc_diff_ids(
+                ifcgit_repo, current_revision.hexsha, selected_revision.hexsha, ifc_path
+            )
+
         area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
         area.spaces[0].shading.color_type = "OBJECT"
-        file = IfcStore.get_file()
 
         for obj in context.visible_objects:
             if not obj.BIMObjectProperties.ifc_definition_id:
                 continue
-            element = file.by_id(obj.BIMObjectProperties.ifc_definition_id)
-            step_id = element.id()
+            step_id = obj.BIMObjectProperties.ifc_definition_id
             if step_id in step_ids["modified"]:
                 obj.color = (0.3, 0.3, 1.0, 1)
             elif step_id in step_ids["added"]:
@@ -184,7 +193,7 @@ class DisplayRevision(bpy.types.Operator):
             elif step_id in step_ids["removed"]:
                 obj.color = (1.0, 0.2, 0.2, 1)
             else:
-                obj.color = (1.0, 1.0, 1.0, 0.8)
+                obj.color = (1.0, 1.0, 1.0, 0.5)
 
         return {"FINISHED"}
 
@@ -192,7 +201,7 @@ class DisplayRevision(bpy.types.Operator):
 class SwitchRevision(bpy.types.Operator):
     """Switches the repository to the given revision and reloads the IFC file"""
 
-    bl_label = "Switch revision"
+    bl_label = "Checkout revision"
     bl_idname = "ifcgit.switch_revision"
     bl_options = {"REGISTER"}
 
@@ -207,6 +216,7 @@ class SwitchRevision(bpy.types.Operator):
         ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
+        # NOTE this is calling the git binary in a subprocess
         ifcgit_repo.git.checkout(item.hexsha)
 
         IfcStore.purge()
@@ -247,7 +257,9 @@ def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
     """Given two revision hashes and a filename, retrieve"""
     """step-ids of modified, added and removed entities"""
 
+    # NOTE this is calling the git binary in a subprocess
     diff_lines = repo.git.diff(hash_a, hash_b, path_ifc).split("\n")
+
     inserted = set()
     deleted = set()
     for line in diff_lines:
