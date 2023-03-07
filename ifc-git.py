@@ -69,6 +69,7 @@ class IfcGitPanel(bpy.types.Panel):
         row = layout.row()
         row.label(text=os.path.dirname(path_ifc), icon="SYSTEM")
 
+        # FIXME if file isn't saved, no list, offer to save project
         # FIXME if is_dirty() no list, just show diff, commit with message, or revert
 
         row = layout.row()
