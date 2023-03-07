@@ -56,6 +56,9 @@ class IfcGitPanel(bpy.types.Panel):
         row = layout.row()
         row.label(text=os.path.basename(path_ifc), icon="FILE_BLANK")
 
+        # FIXME check IfcStore.edited_objs and IfcStore.deleted_ids for unsaved changes
+        #       colourise unsaved changes
+
         row = layout.row()
         row.operator("ifcgit.refresh")
 
@@ -64,13 +67,17 @@ class IfcGitPanel(bpy.types.Panel):
         if not ifcgit_repo:
             row = layout.row()
             row.label(text="No Git repository found", icon="SYSTEM")
+            # FIXME offer to create repository and add ifc file
             return
 
         row = layout.row()
         row.label(text=os.path.dirname(path_ifc), icon="SYSTEM")
 
+        # FIXME check if file is added to repository, offer to add/commit it
         # FIXME if file isn't saved, no list, offer to save project
         # FIXME if is_dirty() no list, just show diff, commit with message, or revert
+        #       colourise uncommitted changes
+        # FIXME committing a detached HEAD should warn and create a branch
 
         row = layout.row()
         row.template_list(
@@ -183,6 +190,8 @@ class DisplayRevision(bpy.types.Operator):
         area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
         area.spaces[0].shading.color_type = "OBJECT"
 
+        # FIXME showing diff against current revision should reset to MATERIAL colours
+
         for obj in context.visible_objects:
             if not obj.BIMObjectProperties.ifc_definition_id:
                 continue
@@ -219,6 +228,8 @@ class SwitchRevision(bpy.types.Operator):
 
         # NOTE this is calling the git binary in a subprocess
         ifcgit_repo.git.checkout(item.hexsha)
+
+        # FIXME switching to HEAD should reattach to 'main' branch
 
         IfcStore.purge()
         # delete any IfcProject/* collections
