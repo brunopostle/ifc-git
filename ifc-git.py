@@ -46,37 +46,37 @@ class IfcGitPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-        if not path_ifc:
-            row = layout.row()
+
+        # FIXME if file isn't saved, offer to save to disk
+
+        row = layout.row()
+        if path_ifc:
+            repo = repo_from_ifc_path(path_ifc)
+            if repo:
+                # FIXME check if file is added to repository, offer to add/commit it
+                row.label(text=os.path.dirname(path_ifc), icon="SYSTEM")
+                row.label(text=os.path.basename(path_ifc), icon="FILE_BLANK")
+            else:
+                # FIXME offer to create repository and add/commit ifc file
+                row.label(text="No git repository found", icon="SYSTEM")
+                row.label(text=os.path.basename(path_ifc), icon="FILE_BLANK")
+                return
+        else:
+            row.label(text="No git repository found", icon="SYSTEM")
             row.label(text="No IFC project loaded", icon="FILE_BLANK")
             return
 
-        row = layout.row()
-        row.label(text=os.path.basename(path_ifc), icon="FILE_BLANK")
-
-        # FIXME check IfcStore.edited_objs and IfcStore.deleted_ids for unsaved changes
-        #       colourise unsaved changes
+        if repo.is_dirty():
+            row = layout.row()
+            row.label(text="Saved changes are not committed to repository")
+            # FIXME commit with message, or revert
+            # FIXME colourise uncommitted changes
+            return
 
         row = layout.row()
         row.operator("ifcgit.refresh")
 
-        if "ifcgit_repo" not in globals():
-            return
-        if not ifcgit_repo:
-            row = layout.row()
-            row.label(text="No Git repository found", icon="SYSTEM")
-            # FIXME offer to create repository and add ifc file
-            return
-
-        row = layout.row()
-        row.label(text=os.path.dirname(path_ifc), icon="SYSTEM")
-
-        # FIXME check if file is added to repository, offer to add/commit it
-        # FIXME if file isn't saved, no list, offer to save project
-        # FIXME if is_dirty() no list, just show diff, commit with message, or revert
-        #       colourise uncommitted changes
         # FIXME committing a detached HEAD should warn and create a branch
 
         row = layout.row()
@@ -94,10 +94,14 @@ class IfcGitPanel(bpy.types.Panel):
 
         row = layout.row()
         row.label(text=commit.hexsha)
-        row.operator("ifcgit.display_revision")
+        row.operator("ifcgit.display_revision", icon="SELECT_DIFFERENCE")
         row.operator("ifcgit.switch_revision")
         row = layout.row()
-        row.label(text=commit.message)
+        row.label(text=commit.author.name + " <" + commit.author.email + ">")
+        stats = commit.stats.files[os.path.basename(path_ifc)]
+        row = layout.row()
+        row.label(text="Insertions: " + str(stats["insertions"]))
+        row.label(text="Deletions: " + str(stats["deletions"]))
 
 
 class ListItem(bpy.types.PropertyGroup):
@@ -118,12 +122,13 @@ class COMMIT_UL_List(bpy.types.UIList):
     ):
 
         # FIXME selecting a commit should call DisplayRevision operator without Show diff button
-        # FIXME indicate HEAD and/or current revision as bold or somesuch
+        current_revision = ifcgit_repo.commit()
         commit = ifcgit_repo.commit(rev=item.hexsha)
-        label = (
-            commit.author.name + ", " + time.asctime(time.gmtime(commit.committed_date))
-        )
-        layout.label(text=label)
+        if commit == current_revision:
+            layout.label(text="[HEAD] " + commit.message, icon="DECORATE_KEYFRAME")
+        else:
+            layout.label(text=commit.message, icon="DECORATE_ANIMATE")
+        layout.label(text=time.asctime(time.gmtime(commit.committed_date)))
 
 
 # OPERATORS
@@ -132,7 +137,7 @@ class COMMIT_UL_List(bpy.types.UIList):
 class RefreshGit(bpy.types.Operator):
     """Update IFC Git panel"""
 
-    bl_label = "Refresh"
+    bl_label = "Refresh revision history"
     bl_idname = "ifcgit.refresh"
     bl_options = {"REGISTER"}
 
