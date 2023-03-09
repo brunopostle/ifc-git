@@ -3,9 +3,7 @@ import re
 import git
 import bpy
 import time
-import logging
 from blenderbim.bim.ifc import IfcStore
-from blenderbim.bim import import_ifc
 
 bl_info = {
     "name": "IFC git",
@@ -39,7 +37,6 @@ class IfcGitPanel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""
 
     bl_label = "IFC Git"
-    bl_idname = "OBJECT_PT_ifcgit"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "scene"
@@ -47,41 +44,62 @@ class IfcGitPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        # FIXME
+        global ifcgit_repo
 
         # FIXME if file isn't saved, offer to save to disk
 
         row = layout.row()
         if path_ifc:
-            repo = repo_from_ifc_path(path_ifc)
-            if repo:
-                # FIXME check if file is added to repository, offer to add/commit it
-                row.label(text=os.path.dirname(path_ifc), icon="SYSTEM")
-                row.label(text=os.path.basename(path_ifc), icon="FILE_BLANK")
+            ifcgit_repo = repo_from_ifc_path(path_ifc)
+            name_ifc = os.path.basename(path_ifc)
+            if ifcgit_repo:
+                row.label(text=ifcgit_repo.working_dir, icon="SYSTEM")
+                if name_ifc in ifcgit_repo.untracked_files:
+                    row.operator(
+                        "ifcgit.addfile",
+                        text="Add '" + name_ifc + "' to repository",
+                        icon="FILE",
+                    )
+                    return
+                else:
+                    row.label(text=name_ifc, icon="FILE")
             else:
-                # FIXME offer to create repository and add/commit ifc file
-                row.label(text="No git repository found", icon="SYSTEM")
-                row.label(text=os.path.basename(path_ifc), icon="FILE_BLANK")
+                row.operator("ifcgit.createrepo", icon="SYSTEM")
+                row.label(text=name_ifc, icon="FILE")
                 return
         else:
             row.label(text="No git repository found", icon="SYSTEM")
-            row.label(text="No IFC project loaded", icon="FILE_BLANK")
+            row.label(text="No IFC project loaded or saved", icon="FILE")
             return
 
-        if repo.is_dirty():
+        if ifcgit_repo.is_dirty(path=path_ifc):
             row = layout.row()
-            row.label(text="Saved changes are not committed to repository")
-            # FIXME commit with message, or revert
-            # FIXME colourise uncommitted changes
+            row.label(text="Saved changes have not been committed", icon="ERROR")
+
+            row = layout.row()
+            row.operator("ifcgit.display_uncommitted", icon="SELECT_DIFFERENCE")
+            row.operator("ifcgit.discard", icon="TRASH")
+
+            if ifcgit_repo.head.is_detached:
+                row = layout.row()
+                row.label(
+                    text="HEAD is detached, commit will create a branch", icon="ERROR"
+                )
+                # FIXME committing a detached HEAD should create a branch
+
+            row = layout.row()
+            context.scene.commit_message
+            row.prop(context.scene, "commit_message")
+            row = layout.row()
+            row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
+
             return
-
-        row = layout.row()
-        row.operator("ifcgit.refresh")
-
-        # FIXME committing a detached HEAD should warn and create a branch
 
         row = layout.row()
         # FIXME assumes branch is 'main'
-        row.label(text="Showing branch: " + repo.branches[0].name)
+        row.label(text="Showing branch: " + ifcgit_repo.branches[0].name)
+        row.operator("ifcgit.refresh", icon="FILE_REFRESH")
 
         row = layout.row()
         row.template_list(
@@ -99,20 +117,15 @@ class IfcGitPanel(bpy.types.Panel):
         row = layout.row()
         row.label(text=commit.hexsha)
         if item.relevant:
+            # FIXME don't show if selected is current HEAD
             row.operator("ifcgit.display_revision", icon="SELECT_DIFFERENCE")
-            row.operator("ifcgit.switch_revision")
+            row.operator("ifcgit.switch_revision", icon="FILE_TICK")
         else:
-            row.label(text="Not IFC project related", icon="ERROR")
+            row.label(text="Revision unrelated to current IFC", icon="ERROR")
         row = layout.row()
         row.label(text=commit.author.name + " <" + commit.author.email + ">")
         row = layout.row()
         row.label(text=commit.message)
-
-        # stats = commit.stats.total
-        # row = layout.row()
-        # row.label(text="Insertions: " + str(stats["insertions"]))
-        # row.label(text="Deletions: " + str(stats["deletions"]))
-        # row.label(text="Files: " + str(stats["files"]))
 
 
 class ListItem(bpy.types.PropertyGroup):
@@ -150,6 +163,94 @@ class COMMIT_UL_List(bpy.types.UIList):
 # OPERATORS
 
 
+class CreateRepo(bpy.types.Operator):
+    """Initialise a git repository"""
+
+    bl_label = "Create Git repository"
+    bl_idname = "ifcgit.createrepo"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        if not os.path.isfile(path_ifc):
+            return None
+        if repo_from_ifc_path(path_ifc):
+            # repo already exists
+            return
+        path_dir = os.path.abspath(os.path.dirname(path_ifc))
+        git.Repo.init(path_dir)
+
+        return {"FINISHED"}
+
+
+class AddFileToRepo(bpy.types.Operator):
+    """Add a file to a repository"""
+
+    bl_label = "Add file to repository"
+    bl_idname = "ifcgit.addfile"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        if not os.path.isfile(path_ifc):
+            return None
+        repo = repo_from_ifc_path(path_ifc)
+        repo.index.add(path_ifc)
+        repo.index.commit(message="Added " + os.path.basename(path_ifc))
+        bpy.ops.ifcgit.refresh()
+
+        return {"FINISHED"}
+
+
+class DiscardUncommitted(bpy.types.Operator):
+    """Discard saved changes and update to HEAD"""
+
+    bl_label = "Discard uncommitted changes"
+    bl_idname = "ifcgit.discard"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        ifcgit_repo.git.checkout(path_ifc)
+
+        IfcStore.purge()
+        # delete any IfcProject/* collections
+        for collection in bpy.data.collections:
+            if re.match("^IfcProject/", collection.name):
+                delete_collection(collection)
+
+        bpy.ops.bim.load_project(filepath=path_ifc)
+        bpy.ops.ifcgit.refresh()
+
+        return {"FINISHED"}
+
+
+class CommitChanges(bpy.types.Operator):
+    """Commit current saved changes"""
+
+    bl_label = "Commit changes"
+    bl_idname = "ifcgit.commit_changes"
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        if context.scene.commit_message == "Write your commit message here":
+            return False
+        return True
+
+    def execute(self, context):
+
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        ifcgit_repo.index.add(path_ifc)
+        ifcgit_repo.index.commit(message=context.scene.commit_message)
+        context.scene.commit_message = "Write your commit message here"
+
+        return {"FINISHED"}
+
+
 class RefreshGit(bpy.types.Operator):
     """Update IFC Git panel"""
 
@@ -165,24 +266,27 @@ class RefreshGit(bpy.types.Operator):
         # ifcgit_commits is registered list widget
         context.scene.ifcgit_commits.clear()
 
-        ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
 
-        # FIXME bad bad bad
+        # FIXME
         global ifcgit_repo
-        ifcgit_repo = repo_from_ifc_path(ifc_path)
+        ifcgit_repo = repo_from_ifc_path(path_ifc)
         global ifcgit_branch
         # ifcgit_branch = ifcgit_repo.active_branch
 
         commits = list(
             git.objects.commit.Commit.iter_items(
                 # FIXME assumes current branch is 'main'
-                repo=ifcgit_repo, rev=[ifcgit_repo.branches[0].name]
+                repo=ifcgit_repo,
+                rev=[ifcgit_repo.branches[0].name],
             )
         )
         commits_relevant = list(
             git.objects.commit.Commit.iter_items(
                 # FIXME assumes current branch is 'main'
-                repo=ifcgit_repo, rev=[ifcgit_repo.branches[0].name], paths=[ifc_path]
+                repo=ifcgit_repo,
+                rev=[ifcgit_repo.branches[0].name],
+                paths=[path_ifc],
             )
         )
 
@@ -204,7 +308,7 @@ class DisplayRevision(bpy.types.Operator):
 
     def execute(self, context):
 
-        ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
         selected_revision = ifcgit_repo.commit(rev=item.hexsha)
@@ -212,30 +316,31 @@ class DisplayRevision(bpy.types.Operator):
 
         if current_revision.committed_date > selected_revision.committed_date:
             step_ids = ifc_diff_ids(
-                ifcgit_repo, selected_revision.hexsha, current_revision.hexsha, ifc_path
+                ifcgit_repo, selected_revision.hexsha, current_revision.hexsha, path_ifc
             )
         else:
             step_ids = ifc_diff_ids(
-                ifcgit_repo, current_revision.hexsha, selected_revision.hexsha, ifc_path
+                ifcgit_repo, current_revision.hexsha, selected_revision.hexsha, path_ifc
             )
 
-        area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
-        area.spaces[0].shading.color_type = "OBJECT"
-
         # FIXME showing diff against current revision should reset to MATERIAL colours
+        colourise(step_ids)
 
-        for obj in context.visible_objects:
-            if not obj.BIMObjectProperties.ifc_definition_id:
-                continue
-            step_id = obj.BIMObjectProperties.ifc_definition_id
-            if step_id in step_ids["modified"]:
-                obj.color = (0.3, 0.3, 1.0, 1)
-            elif step_id in step_ids["added"]:
-                obj.color = (0.2, 0.8, 0.2, 1)
-            elif step_id in step_ids["removed"]:
-                obj.color = (1.0, 0.2, 0.2, 1)
-            else:
-                obj.color = (1.0, 1.0, 1.0, 0.5)
+        return {"FINISHED"}
+
+
+class DisplayUncommitted(bpy.types.Operator):
+    """Colourise uncommitted objects"""
+
+    bl_label = "Show uncommitted changes"
+    bl_idname = "ifcgit.display_uncommitted"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        step_ids = ifc_diff_ids(ifcgit_repo, None, "HEAD", path_ifc)
+        colourise(step_ids)
 
         return {"FINISHED"}
 
@@ -255,7 +360,7 @@ class SwitchRevision(bpy.types.Operator):
 
     def execute(self, context):
 
-        ifc_path = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
         # NOTE this is calling the git binary in a subprocess
@@ -269,14 +374,7 @@ class SwitchRevision(bpy.types.Operator):
             if re.match("^IfcProject/", collection.name):
                 delete_collection(collection)
 
-        logger = logging.getLogger("ImportIFC")
-
-        ifc_import_settings = import_ifc.IfcImportSettings.factory(
-            bpy.context, ifc_path, logger
-        )
-        ifc_importer = import_ifc.IfcImporter(ifc_import_settings)
-        ifc_importer.execute()
-
+        bpy.ops.bim.load_project(filepath=path_ifc)
         bpy.ops.ifcgit.refresh()
         # context.scene.commit_index = 0
 
@@ -305,7 +403,10 @@ def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
     """step-ids of modified, added and removed entities"""
 
     # NOTE this is calling the git binary in a subprocess
-    diff_lines = repo.git.diff(hash_a, hash_b, path_ifc).split("\n")
+    if not hash_a:
+        diff_lines = repo.git.diff(hash_b, path_ifc).split("\n")
+    else:
+        diff_lines = repo.git.diff(hash_a, hash_b, path_ifc).split("\n")
 
     inserted = set()
     deleted = set()
@@ -327,6 +428,24 @@ def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
     }
 
 
+def colourise(step_ids):
+    area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
+    area.spaces[0].shading.color_type = "OBJECT"
+
+    for obj in bpy.context.visible_objects:
+        if not obj.BIMObjectProperties.ifc_definition_id:
+            continue
+        step_id = obj.BIMObjectProperties.ifc_definition_id
+        if step_id in step_ids["modified"]:
+            obj.color = (0.3, 0.3, 1.0, 1)
+        elif step_id in step_ids["added"]:
+            obj.color = (0.2, 0.8, 0.2, 1)
+        elif step_id in step_ids["removed"]:
+            obj.color = (1.0, 0.2, 0.2, 1)
+        else:
+            obj.color = (1.0, 1.0, 1.0, 0.5)
+
+
 def delete_collection(blender_collection):
     for obj in blender_collection.objects:
         bpy.data.objects.remove(obj, do_unlink=True)
@@ -340,23 +459,39 @@ def register():
     bpy.utils.register_class(IfcGitPanel)
     bpy.utils.register_class(ListItem)
     bpy.utils.register_class(COMMIT_UL_List)
+    bpy.utils.register_class(CreateRepo)
+    bpy.utils.register_class(AddFileToRepo)
+    bpy.utils.register_class(DiscardUncommitted)
+    bpy.utils.register_class(CommitChanges)
     bpy.utils.register_class(RefreshGit)
     bpy.utils.register_class(DisplayRevision)
+    bpy.utils.register_class(DisplayUncommitted)
     bpy.utils.register_class(SwitchRevision)
     bpy.types.Scene.ifcgit_commits = bpy.props.CollectionProperty(type=ListItem)
     bpy.types.Scene.commit_index = bpy.props.IntProperty(
         name="Index for my_list", default=0
+    )
+    bpy.types.Scene.commit_message = bpy.props.StringProperty(
+        name="Commit message",
+        description="A human readable description of these changes",
+        default="Write your commit message here",
     )
 
 
 def unregister():
     del bpy.types.Scene.ifcgit_commits
     del byp.types.Scene.commit_index
+    del bpy.types.Scene.commit_message
     bpy.utils.unregister_class(IfcGitPanel)
     bpy.utils.unregister_class(ListItem)
     bpy.utils.unregister_class(COMMIT_UL_List)
+    bpy.utils.unregister_class(CreateRepo)
+    bpy.utils.unregister_class(AddFileToRepo)
+    bpy.utils.unregister_class(DiscardUncommitted)
+    bpy.utils.unregister_class(CommitChanges)
     bpy.utils.unregister_class(RefreshGit)
     bpy.utils.unregister_class(DisplayRevision)
+    bpy.utils.unregister_class(DisplayUncommitted)
     bpy.utils.unregister_class(SwitchRevision)
 
 
