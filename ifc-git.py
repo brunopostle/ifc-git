@@ -80,6 +80,10 @@ class IfcGitPanel(bpy.types.Panel):
         # FIXME committing a detached HEAD should warn and create a branch
 
         row = layout.row()
+        # FIXME assumes branch is 'main'
+        row.label(text="Showing branch: " + repo.branches[0].name)
+
+        row = layout.row()
         row.template_list(
             "COMMIT_UL_List",
             "The_List",
@@ -94,14 +98,21 @@ class IfcGitPanel(bpy.types.Panel):
 
         row = layout.row()
         row.label(text=commit.hexsha)
-        row.operator("ifcgit.display_revision", icon="SELECT_DIFFERENCE")
-        row.operator("ifcgit.switch_revision")
+        if item.relevant:
+            row.operator("ifcgit.display_revision", icon="SELECT_DIFFERENCE")
+            row.operator("ifcgit.switch_revision")
+        else:
+            row.label(text="Not IFC project related", icon="ERROR")
         row = layout.row()
         row.label(text=commit.author.name + " <" + commit.author.email + ">")
-        stats = commit.stats.files[os.path.basename(path_ifc)]
         row = layout.row()
-        row.label(text="Insertions: " + str(stats["insertions"]))
-        row.label(text="Deletions: " + str(stats["deletions"]))
+        row.label(text=commit.message)
+
+        # stats = commit.stats.total
+        # row = layout.row()
+        # row.label(text="Insertions: " + str(stats["insertions"]))
+        # row.label(text="Deletions: " + str(stats["deletions"]))
+        # row.label(text="Files: " + str(stats["files"]))
 
 
 class ListItem(bpy.types.PropertyGroup):
@@ -111,6 +122,11 @@ class ListItem(bpy.types.PropertyGroup):
         name="Git hash",
         description="checksum for this commit",
         default="Uncommitted data!",
+    )
+    relevant: bpy.props.BoolProperty(
+        name="Is relevant",
+        description="does this commit reference our ifc file",
+        default=False,
     )
 
 
@@ -154,16 +170,27 @@ class RefreshGit(bpy.types.Operator):
         # FIXME bad bad bad
         global ifcgit_repo
         ifcgit_repo = repo_from_ifc_path(ifc_path)
+        global ifcgit_branch
+        # ifcgit_branch = ifcgit_repo.active_branch
 
         commits = list(
             git.objects.commit.Commit.iter_items(
-                repo=ifcgit_repo, rev=["HEAD"], paths=[ifc_path]
+                # FIXME assumes current branch is 'main'
+                repo=ifcgit_repo, rev=[ifcgit_repo.branches[0].name]
+            )
+        )
+        commits_relevant = list(
+            git.objects.commit.Commit.iter_items(
+                # FIXME assumes current branch is 'main'
+                repo=ifcgit_repo, rev=[ifcgit_repo.branches[0].name], paths=[ifc_path]
             )
         )
 
         for commit in commits:
             context.scene.ifcgit_commits.add()
             context.scene.ifcgit_commits[-1].hexsha = commit.hexsha
+            if commit in commits_relevant:
+                context.scene.ifcgit_commits[-1].relevant = True
 
         return {"FINISHED"}
 
@@ -249,6 +276,9 @@ class SwitchRevision(bpy.types.Operator):
         )
         ifc_importer = import_ifc.IfcImporter(ifc_import_settings)
         ifc_importer.execute()
+
+        bpy.ops.ifcgit.refresh()
+        # context.scene.commit_index = 0
 
         return {"FINISHED"}
 
