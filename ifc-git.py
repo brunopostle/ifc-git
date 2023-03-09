@@ -87,6 +87,7 @@ class IfcGitPanel(bpy.types.Panel):
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
                 )
                 # FIXME committing a detached HEAD should create a branch
+                # git branch my_branch; git checkout my_branch
 
             row = layout.row()
             context.scene.commit_message
@@ -99,6 +100,7 @@ class IfcGitPanel(bpy.types.Panel):
         row = layout.row()
         # FIXME assumes branch is 'main'
         row.label(text="Showing branch: " + ifcgit_repo.branches[0].name)
+        # FIXME should just be a side icon as only needed after external repo updates
         row.operator("ifcgit.refresh", icon="FILE_REFRESH")
 
         row = layout.row()
@@ -247,6 +249,7 @@ class CommitChanges(bpy.types.Operator):
         ifcgit_repo.index.add(path_ifc)
         ifcgit_repo.index.commit(message=context.scene.commit_message)
         context.scene.commit_message = "Write your commit message here"
+        bpy.ops.ifcgit.refresh()
 
         return {"FINISHED"}
 
