@@ -6,10 +6,10 @@ import time
 from blenderbim.bim.ifc import IfcStore
 
 bl_info = {
-    "name": "IFC git",
+    "name": "IFC Git",
     "author": "Bruno Postle",
-    "location": "Scene > IFC git",
-    "description": "Manage IFC files in git",
+    "location": "Scene > IFC Git",
+    "description": "Manage IFC files in Git repositories",
     "blender": (2, 80, 0),
     "category": "Import-Export",
 }
@@ -33,7 +33,7 @@ bl_info = {
 # GUI CLASSES
 
 
-class IfcGitPanel(bpy.types.Panel):
+class IFCGIT_PT_panel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""
 
     bl_label = "IFC Git"
@@ -69,7 +69,7 @@ class IfcGitPanel(bpy.types.Panel):
                 row.label(text=name_ifc, icon="FILE")
                 return
         else:
-            row.label(text="No git repository found", icon="SYSTEM")
+            row.label(text="No Git repository found", icon="SYSTEM")
             row.label(text="No IFC project loaded or saved", icon="FILE")
             return
 
@@ -100,8 +100,6 @@ class IfcGitPanel(bpy.types.Panel):
         row = layout.row()
         # FIXME assumes branch is 'main'
         row.label(text="Showing branch: " + ifcgit_repo.branches[0].name)
-        # FIXME should just be a side icon as only needed after external repo updates
-        row.operator("ifcgit.refresh", icon="FILE_REFRESH")
 
         row = layout.row()
         row.template_list(
@@ -112,21 +110,30 @@ class IfcGitPanel(bpy.types.Panel):
             context.scene,
             "commit_index",
         )
+        column = row.column()
+        row = column.row()
+        row.operator("ifcgit.refresh", icon="FILE_REFRESH")
+
+        row = column.row()
+        row.operator("ifcgit.display_revision", icon="SELECT_DIFFERENCE")
+
+        row = column.row()
+        row.operator("ifcgit.switch_revision", icon="CURRENT_FILE")
 
         item = context.scene.ifcgit_commits[context.scene.commit_index]
         commit = ifcgit_repo.commit(rev=item.hexsha)
 
-        row = layout.row()
-        row.label(text=commit.hexsha)
-        if item.relevant:
-            # FIXME don't show if selected is current HEAD
-            row.operator("ifcgit.display_revision", icon="SELECT_DIFFERENCE")
-            row.operator("ifcgit.switch_revision", icon="FILE_TICK")
-        else:
+        if not item.relevant:
+            row = layout.row()
             row.label(text="Revision unrelated to current IFC", icon="ERROR")
-        row = layout.row()
+
+        box = layout.box()
+        # FIXME reduce spacing between rows
+        row = box.row()
+        row.label(text=commit.hexsha)
+        row = box.row()
         row.label(text=commit.author.name + " <" + commit.author.email + ">")
-        row = layout.row()
+        row = box.row()
         row.label(text=commit.message)
 
 
@@ -146,13 +153,12 @@ class ListItem(bpy.types.PropertyGroup):
 
 
 class COMMIT_UL_List(bpy.types.UIList):
-    """List of git commits"""
+    """List of Git commits"""
 
     def draw_item(
         self, context, layout, data, item, icon, active_data, active_propname, index
     ):
 
-        # FIXME selecting a commit should call DisplayRevision operator without Show diff button
         current_revision = ifcgit_repo.commit()
         commit = ifcgit_repo.commit(rev=item.hexsha)
         if commit == current_revision:
@@ -160,13 +166,16 @@ class COMMIT_UL_List(bpy.types.UIList):
         else:
             layout.label(text=commit.message, icon="DECORATE_ANIMATE")
         layout.label(text=time.asctime(time.gmtime(commit.committed_date)))
+        # FIXME selecting a commit should call DisplayRevision operator without needing button
+        # if index == context.scene.commit_index:
+        #     bpy.ops.ifcgit.display_revision()
 
 
 # OPERATORS
 
 
 class CreateRepo(bpy.types.Operator):
-    """Initialise a git repository"""
+    """Initialise a Git repository"""
 
     bl_label = "Create Git repository"
     bl_idname = "ifcgit.createrepo"
@@ -239,7 +248,7 @@ class CommitChanges(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if context.scene.commit_message == "Write your commit message here":
+        if context.scene.commit_message == "":
             return False
         return True
 
@@ -248,16 +257,16 @@ class CommitChanges(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         ifcgit_repo.index.add(path_ifc)
         ifcgit_repo.index.commit(message=context.scene.commit_message)
-        context.scene.commit_message = "Write your commit message here"
+        context.scene.commit_message = ""
         bpy.ops.ifcgit.refresh()
 
         return {"FINISHED"}
 
 
 class RefreshGit(bpy.types.Operator):
-    """Update IFC Git panel"""
+    """Refresh revision list"""
 
-    bl_label = "Refresh revision history"
+    bl_label = ""
     bl_idname = "ifcgit.refresh"
     bl_options = {"REGISTER"}
 
@@ -305,9 +314,15 @@ class RefreshGit(bpy.types.Operator):
 class DisplayRevision(bpy.types.Operator):
     """Colourise objects by selected revision"""
 
-    bl_label = "Show diff"
+    bl_label = ""
     bl_idname = "ifcgit.display_revision"
     bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        if ifcgit_repo.is_dirty():
+            return False
+        return True
 
     def execute(self, context):
 
@@ -349,14 +364,15 @@ class DisplayUncommitted(bpy.types.Operator):
 
 
 class SwitchRevision(bpy.types.Operator):
-    """Switches the repository to the given revision and reloads the IFC file"""
+    """Switches the repository to the selected revision and reloads the IFC file"""
 
-    bl_label = "Checkout revision"
+    bl_label = ""
     bl_idname = "ifcgit.switch_revision"
     bl_options = {"REGISTER"}
 
     @classmethod
     def poll(cls, context):
+        # FIXME don't show if selected is current HEAD
         if ifcgit_repo.is_dirty():
             return False
         return True
@@ -459,7 +475,7 @@ def delete_collection(blender_collection):
 
 
 def register():
-    bpy.utils.register_class(IfcGitPanel)
+    bpy.utils.register_class(IFCGIT_PT_panel)
     bpy.utils.register_class(ListItem)
     bpy.utils.register_class(COMMIT_UL_List)
     bpy.utils.register_class(CreateRepo)
@@ -485,7 +501,7 @@ def unregister():
     del bpy.types.Scene.ifcgit_commits
     del byp.types.Scene.commit_index
     del bpy.types.Scene.commit_message
-    bpy.utils.unregister_class(IfcGitPanel)
+    bpy.utils.unregister_class(IFCGIT_PT_panel)
     bpy.utils.unregister_class(ListItem)
     bpy.utils.unregister_class(COMMIT_UL_List)
     bpy.utils.unregister_class(CreateRepo)
