@@ -81,17 +81,16 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             row.operator("ifcgit.display_uncommitted", icon="SELECT_DIFFERENCE")
             row.operator("ifcgit.discard", icon="TRASH")
 
+            row = layout.row()
+            row.prop(context.scene, "commit_message")
+
             if ifcgit_repo.head.is_detached:
                 row = layout.row()
                 row.label(
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
                 )
-                # FIXME committing a detached HEAD should create a branch
-                # git branch my_branch; git checkout my_branch
+                row.prop(context.scene, "new_branch_name")
 
-            row = layout.row()
-            context.scene.commit_message
-            row.prop(context.scene, "commit_message")
             row = layout.row()
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
 
@@ -126,6 +125,8 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = column.row()
         row.operator("ifcgit.switch_revision", icon="CURRENT_FILE")
+
+        # TODO merge selected
 
         item = context.scene.ifcgit_commits[context.scene.commit_index]
         commit = ifcgit_repo.commit(rev=item.hexsha)
@@ -284,6 +285,15 @@ class CommitChanges(bpy.types.Operator):
     def poll(cls, context):
         if context.scene.commit_message == "":
             return False
+        if ifcgit_repo.head.is_detached and (
+            context.scene.new_branch_name == ""
+            or not re.match("^[0-9a-zA-Z_-]+$", context.scene.new_branch_name)
+            or re.match("(^[.-]|[.]$)", context.scene.new_branch_name)
+            or context.scene.new_branch_name
+            in [branch.name for branch in ifcgit_repo.branches]
+        ):
+            # FIXME allow utf8 branch names
+            return False
         if not ifcgit_repo.is_dirty():
             return False
         return True
@@ -294,6 +304,13 @@ class CommitChanges(bpy.types.Operator):
         ifcgit_repo.index.add(path_ifc)
         ifcgit_repo.index.commit(message=context.scene.commit_message)
         context.scene.commit_message = ""
+
+        if ifcgit_repo.head.is_detached:
+            new_branch = ifcgit_repo.create_head(context.scene.new_branch_name)
+            new_branch.checkout()
+            context.scene.display_branch = context.scene.new_branch_name
+            context.scene.new_branch_name = ""
+
         bpy.ops.ifcgit.refresh()
 
         return {"FINISHED"}
@@ -556,6 +573,11 @@ def register():
         description="A human readable description of these changes",
         default="",
     )
+    bpy.types.Scene.new_branch_name = bpy.props.StringProperty(
+        name="New branch name",
+        description="A short name used to refer to this branch",
+        default="",
+    )
     bpy.types.Scene.display_branch = bpy.props.EnumProperty(items=git_branches)
 
 
@@ -563,6 +585,7 @@ def unregister():
     del bpy.types.Scene.ifcgit_commits
     del byp.types.Scene.commit_index
     del bpy.types.Scene.commit_message
+    del bpy.types.Scene.new_branch_name
     del bpy.types.Scene.display_branch
     bpy.utils.unregister_class(IFCGIT_PT_panel)
     bpy.utils.unregister_class(ListItem)
