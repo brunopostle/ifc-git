@@ -33,6 +33,11 @@ bl_info = {
 # GUI CLASSES
 
 
+# TODO add-on preferences to set username and email
+# TODO add-on preferences check to see if git binary is configured
+# TODO add-on preferences to configure ifcmerge
+
+
 class IFCGIT_PT_panel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""
 
@@ -125,6 +130,9 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = column.row()
         row.operator("ifcgit.switch_revision", icon="CURRENT_FILE")
+
+        row = column.row()
+        row.operator("ifcgit.merge", icon="EXPERIMENTAL", text="")
 
         # TODO merge selected
 
@@ -260,6 +268,7 @@ class DiscardUncommitted(bpy.types.Operator):
     def execute(self, context):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        # NOTE this is calling the git binary in a subprocess
         ifcgit_repo.git.checkout(path_ifc)
 
         IfcStore.purge()
@@ -464,6 +473,57 @@ class SwitchRevision(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class Merge(bpy.types.Operator):
+    """Merges the selected branch into working branch"""
+
+    bl_label = "Merge this branch"
+    bl_idname = "ifcgit.merge"
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        item = context.scene.ifcgit_commits[context.scene.commit_index]
+
+        lookup = branches_by_hexsha(ifcgit_repo)
+        if item.hexsha in lookup:
+            # this is a branch!
+            try:
+                ifcgit_repo.git.merge(lookup[item.hexsha])
+            except git.exc.GitCommandError:
+                # merge is expected to fail, run ifcmerge
+                try:
+                    ifcgit_repo.git.mergetool(tool="ifcmerge")
+                except:
+                    # ifcmerge failed, rollback
+                    ifcgit_repo.git.merge(abort=True)
+
+                    return {"CANCELLED"}
+            except:
+
+                return {"CANCELLED"}
+
+            ifcgit_repo.index.add(path_ifc)
+            context.scene.commit_message = "Merged branch: " + lookup[item.hexsha].name
+
+            IfcStore.purge()
+            # delete any IfcProject/* collections
+            for collection in bpy.data.collections:
+                if re.match("^IfcProject/", collection.name):
+                    delete_collection(collection)
+
+            bpy.ops.bim.load_project(filepath=path_ifc)
+            bpy.ops.ifcgit.refresh()
+
+            return {"FINISHED"}
+        else:
+            return {"CANCELLED"}
+
+
 # FUNCTIONS
 
 
@@ -564,6 +624,7 @@ def register():
     bpy.utils.register_class(DisplayRevision)
     bpy.utils.register_class(DisplayUncommitted)
     bpy.utils.register_class(SwitchRevision)
+    bpy.utils.register_class(Merge)
     bpy.types.Scene.ifcgit_commits = bpy.props.CollectionProperty(type=ListItem)
     bpy.types.Scene.commit_index = bpy.props.IntProperty(
         name="Index for my_list", default=0
@@ -598,6 +659,7 @@ def unregister():
     bpy.utils.unregister_class(DisplayRevision)
     bpy.utils.unregister_class(DisplayUncommitted)
     bpy.utils.unregister_class(SwitchRevision)
+    bpy.utils.unregister_class(Merge)
 
 
 if __name__ == "__main__":
