@@ -34,7 +34,6 @@ bl_info = {
 
 
 # TODO add-on preferences to set username and email
-# TODO add-on preferences check to see if git binary is configured
 # TODO add-on preferences to configure ifcmerge
 
 
@@ -66,7 +65,6 @@ class IFCGIT_PT_panel(bpy.types.Panel):
                         text="Add '" + name_ifc + "' to repository",
                         icon="FILE",
                     )
-                    return
                 else:
                     row.label(text=name_ifc, icon="FILE")
             else:
@@ -75,7 +73,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
                 return
         else:
             row.label(text="No Git repository found", icon="SYSTEM")
-            row.label(text="No IFC project loaded or saved", icon="FILE")
+            row.label(text="No IFC project saved", icon="FILE")
             return
 
         if ifcgit_repo.is_dirty(path=path_ifc):
@@ -98,8 +96,6 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
             row = layout.row()
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
-
-            return
 
         row = layout.row()
         if ifcgit_repo.head.is_detached:
@@ -134,14 +130,12 @@ class IFCGIT_PT_panel(bpy.types.Panel):
         row = column.row()
         row.operator("ifcgit.merge", icon="EXPERIMENTAL", text="")
 
-        # TODO merge selected
-
         item = context.scene.ifcgit_commits[context.scene.commit_index]
         commit = ifcgit_repo.commit(rev=item.hexsha)
 
         if not item.relevant:
             row = layout.row()
-            row.label(text="Revision unrelated to current IFC", icon="ERROR")
+            row.label(text="Revision unrelated to current IFC project", icon="ERROR")
 
         box = layout.box()
         column = box.column(align=True)
@@ -247,6 +241,7 @@ class AddFileToRepo(bpy.types.Operator):
         repo = repo_from_ifc_path(path_ifc)
         repo.index.add(path_ifc)
         repo.index.commit(message="Added " + os.path.basename(path_ifc))
+
         bpy.ops.ifcgit.refresh()
 
         return {"FINISHED"}
@@ -270,15 +265,7 @@ class DiscardUncommitted(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         # NOTE this is calling the git binary in a subprocess
         ifcgit_repo.git.checkout(path_ifc)
-
-        IfcStore.purge()
-        # delete any IfcProject/* collections
-        for collection in bpy.data.collections:
-            if re.match("^IfcProject/", collection.name):
-                delete_collection(collection)
-
-        bpy.ops.bim.load_project(filepath=path_ifc)
-        bpy.ops.ifcgit.refresh()
+        load_project(path_ifc)
 
         return {"FINISHED"}
 
@@ -331,6 +318,12 @@ class RefreshGit(bpy.types.Operator):
     bl_label = ""
     bl_idname = "ifcgit.refresh"
     bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        if ifcgit_repo.heads:
+            return True
+        return False
 
     def execute(self, context):
 
@@ -444,7 +437,6 @@ class SwitchRevision(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        # FIXME don't show if selected is current HEAD
         if ifcgit_repo.is_dirty():
             return False
         return True
@@ -461,14 +453,7 @@ class SwitchRevision(bpy.types.Operator):
             # NOTE this is calling the git binary in a subprocess
             ifcgit_repo.git.checkout(item.hexsha)
 
-        IfcStore.purge()
-        # delete any IfcProject/* collections
-        for collection in bpy.data.collections:
-            if re.match("^IfcProject/", collection.name):
-                delete_collection(collection)
-
-        bpy.ops.bim.load_project(filepath=path_ifc)
-        bpy.ops.ifcgit.refresh()
+        load_project(path_ifc)
 
         return {"FINISHED"}
 
@@ -482,6 +467,8 @@ class Merge(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
+        if ifcgit_repo.is_dirty():
+            return False
         return True
 
     def execute(self, context):
@@ -493,6 +480,7 @@ class Merge(bpy.types.Operator):
         if item.hexsha in lookup:
             # this is a branch!
             try:
+                # NOTE this is calling the git binary in a subprocess
                 ifcgit_repo.git.merge(lookup[item.hexsha])
             except git.exc.GitCommandError:
                 # merge is expected to fail, run ifcmerge
@@ -510,14 +498,7 @@ class Merge(bpy.types.Operator):
             ifcgit_repo.index.add(path_ifc)
             context.scene.commit_message = "Merged branch: " + lookup[item.hexsha].name
 
-            IfcStore.purge()
-            # delete any IfcProject/* collections
-            for collection in bpy.data.collections:
-                if re.match("^IfcProject/", collection.name):
-                    delete_collection(collection)
-
-            bpy.ops.bim.load_project(filepath=path_ifc)
-            bpy.ops.ifcgit.refresh()
+            load_project(path_ifc)
 
             return {"FINISHED"}
         else:
@@ -525,6 +506,19 @@ class Merge(bpy.types.Operator):
 
 
 # FUNCTIONS
+
+
+def load_project(path_ifc):
+    """Clear and load an ifc project"""
+
+    IfcStore.purge()
+    # delete any IfcProject/* collections
+    for collection in bpy.data.collections:
+        if re.match("^IfcProject/", collection.name):
+            delete_collection(collection)
+
+    bpy.ops.bim.load_project(filepath=path_ifc)
+    bpy.ops.ifcgit.refresh()
 
 
 def repo_from_ifc_path(path_ifc):
@@ -552,6 +546,8 @@ def branches_by_hexsha(repo):
 
 def git_branches(self, context):
     """branches enum"""
+
+    # FIXME sort this list but always put 'main' first if present
     return [(branch.name, branch.name, "") for branch in ifcgit_repo.branches]
 
 
@@ -644,7 +640,7 @@ def register():
 
 def unregister():
     del bpy.types.Scene.ifcgit_commits
-    del byp.types.Scene.commit_index
+    del bpy.types.Scene.commit_index
     del bpy.types.Scene.commit_message
     del bpy.types.Scene.new_branch_name
     del bpy.types.Scene.display_branch
