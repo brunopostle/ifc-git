@@ -353,6 +353,7 @@ class RefreshGit(bpy.types.Operator):
             )
         )
 
+        # FIXME need ability to toggle off irrelevant revisions
         for commit in commits:
             context.scene.ifcgit_commits.add()
             context.scene.ifcgit_commits[-1].hexsha = commit.hexsha
@@ -489,6 +490,7 @@ class Merge(bpy.types.Operator):
                 except:
                     # ifcmerge failed, rollback
                     ifcgit_repo.git.merge(abort=True)
+                    # FIXME need to report errors somehow
 
                     return {"CANCELLED"}
             except:
@@ -549,6 +551,13 @@ def git_branches(self, context):
 
     # FIXME sort this list but always put 'main' first if present
     return [(branch.name, branch.name, "") for branch in ifcgit_repo.branches]
+
+
+def update_revlist(self, context):
+    """wrapper to trigger update of the revision list"""
+
+    bpy.ops.ifcgit.refresh()
+    context.scene.commit_index = 0
 
 
 def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
@@ -635,7 +644,9 @@ def register():
         description="A short name used to refer to this branch",
         default="",
     )
-    bpy.types.Scene.display_branch = bpy.props.EnumProperty(items=git_branches)
+    bpy.types.Scene.display_branch = bpy.props.EnumProperty(
+        items=git_branches, update=update_revlist
+    )
 
 
 def unregister():
