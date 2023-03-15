@@ -34,7 +34,6 @@ bl_info = {
 
 
 # TODO add-on preferences to set username and email
-# TODO add-on preferences to configure ifcmerge
 
 
 class IFCGIT_PT_panel(bpy.types.Panel):
@@ -476,6 +475,15 @@ class Merge(bpy.types.Operator):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
+
+        config_reader = ifcgit_repo.config_reader()
+        section = 'mergetool "ifcmerge"'
+        if not config_reader.has_section(section):
+            config_writer = ifcgit_repo.config_writer()
+            config_writer.set_value(
+                section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED"
+            )
+            config_writer.set_value(section, "trustExitCode", True)
 
         lookup = branches_by_hexsha(ifcgit_repo)
         if item.hexsha in lookup:
