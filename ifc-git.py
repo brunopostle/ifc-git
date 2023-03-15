@@ -33,9 +33,6 @@ bl_info = {
 # GUI CLASSES
 
 
-# TODO add-on preferences to set username and email
-
-
 class IFCGIT_PT_panel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""
 
@@ -95,6 +92,8 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
             row = layout.row()
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
+
+        # TODO operators to create tags and branches from current HEAD
 
         row = layout.row()
         if ifcgit_repo.head.is_detached:
@@ -175,6 +174,7 @@ class COMMIT_UL_List(bpy.types.UIList):
         branch_name = ""
         if item.hexsha in lookup:
             branch_name = "[" + lookup[item.hexsha].name + "] "
+            # TODO also show tags
 
         if commit == current_revision:
             layout.label(
@@ -182,6 +182,7 @@ class COMMIT_UL_List(bpy.types.UIList):
             )
         else:
             layout.label(text=branch_name + commit.message, icon="DECORATE_ANIMATE")
+        # FIXME localise date
         layout.label(text=time.asctime(time.gmtime(commit.committed_date)))
 
 
