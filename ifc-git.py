@@ -186,8 +186,7 @@ class COMMIT_UL_List(bpy.types.UIList):
             )
         else:
             layout.label(text=branch_name + commit.message, icon="DECORATE_ANIMATE")
-        # FIXME localise date
-        layout.label(text=time.asctime(time.gmtime(commit.committed_date)))
+        layout.label(text=time.strftime("%c", time.localtime(commit.committed_date)))
 
 
 # OPERATORS
@@ -378,8 +377,6 @@ class DisplayRevision(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        # FIXME don't try and diff between branches
-
         if ifcgit_repo.is_dirty():
             return False
         return True
