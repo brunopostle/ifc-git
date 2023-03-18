@@ -51,9 +51,9 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = layout.row()
         if path_ifc:
-            ifcgit_repo = repo_from_ifc_path(path_ifc)
-            name_ifc = os.path.basename(path_ifc)
+            ifcgit_repo = repo_from_path(path_ifc)
             if ifcgit_repo:
+                name_ifc = os.path.relpath(path_ifc, ifcgit_repo.working_dir)
                 row.label(text=ifcgit_repo.working_dir, icon="SYSTEM")
                 if name_ifc in ifcgit_repo.untracked_files:
                     row.operator(
@@ -64,8 +64,12 @@ class IFCGIT_PT_panel(bpy.types.Panel):
                 else:
                     row.label(text=name_ifc, icon="FILE")
             else:
-                row.operator("ifcgit.createrepo", icon="SYSTEM")
-                row.label(text=name_ifc, icon="FILE")
+                row.operator(
+                    "ifcgit.createrepo",
+                    text="Create '" + os.path.dirname(path_ifc) + "' repository",
+                    icon="SYSTEM",
+                )
+                row.label(text=os.path.basename(path_ifc), icon="FILE")
                 return
         else:
             row.label(text="No Git repository found", icon="SYSTEM")
@@ -92,8 +96,6 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
             row = layout.row()
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
-
-        # TODO operators to create tags and branches from current HEAD
 
         row = layout.row()
         if ifcgit_repo.head.is_detached:
@@ -124,6 +126,8 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = column.row()
         row.operator("ifcgit.switch_revision", icon="CURRENT_FILE")
+
+        # TODO operator to tag selected
 
         row = column.row()
         row.operator("ifcgit.merge", icon="EXPERIMENTAL", text="")
@@ -201,7 +205,7 @@ class CreateRepo(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         if not os.path.isfile(path_ifc):
             return False
-        if repo_from_ifc_path(path_ifc):
+        if repo_from_path(path_ifc):
             # repo already exists
             return False
         if re.match("^/home/[^/]+/?$", os.path.dirname(path_ifc)):
@@ -230,7 +234,7 @@ class AddFileToRepo(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         if not os.path.isfile(path_ifc):
             return False
-        if not repo_from_ifc_path(path_ifc):
+        if not repo_from_path(path_ifc):
             # repo doesn't exist
             return False
         return True
@@ -238,9 +242,11 @@ class AddFileToRepo(bpy.types.Operator):
     def execute(self, context):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-        repo = repo_from_ifc_path(path_ifc)
+        repo = repo_from_path(path_ifc)
         repo.index.add(path_ifc)
-        repo.index.commit(message="Added " + os.path.basename(path_ifc))
+        repo.index.commit(
+            message="Added " + os.path.relpath(path_ifc, repo.working_dir)
+        )
 
         bpy.ops.ifcgit.refresh()
 
@@ -337,7 +343,7 @@ class RefreshGit(bpy.types.Operator):
 
         # FIXME
         global ifcgit_repo
-        ifcgit_repo = repo_from_ifc_path(path_ifc)
+        ifcgit_repo = repo_from_path(path_ifc)
 
         commits = list(
             git.objects.commit.Commit.iter_items(
@@ -353,7 +359,7 @@ class RefreshGit(bpy.types.Operator):
             )
         )
 
-        # FIXME need ability to toggle off irrelevant revisions
+        # TODO option limit to relevant revisions/all revisions/tags/
         for commit in commits:
             context.scene.ifcgit_commits.add()
             context.scene.ifcgit_commits[-1].hexsha = commit.hexsha
@@ -532,17 +538,24 @@ def load_project(path_ifc):
     bpy.ops.ifcgit.refresh()
 
 
-def repo_from_ifc_path(path_ifc):
+def repo_from_path(path):
     """Returns a Git repository object or None"""
-    # FIXME doesn't work if IFC is in a sub-folder
 
-    if not os.path.isfile(path_ifc):
+    if os.path.isdir(path):
+        path_dir = os.path.abspath(path)
+    elif os.path.isfile(path):
+        path_dir = os.path.abspath(os.path.dirname(path))
+    else:
         return None
-    path_dir = os.path.abspath(os.path.dirname(path_ifc))
+
     try:
         repo = git.Repo(path_dir)
     except:
-        return None
+        parentdir_path = os.path.abspath(os.path.join(path_dir, os.pardir))
+        if parentdir_path == path_dir:
+            # root folder
+            return None
+        return repo_from_path(parentdir_path)
     return repo
 
 
