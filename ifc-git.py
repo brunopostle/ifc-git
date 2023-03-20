@@ -40,17 +40,18 @@ class IFCGIT_PT_panel(bpy.types.Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "scene"
+    bl_options = {"DEFAULT_CLOSED"}
 
     def draw(self, context):
         layout = self.layout
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-        # FIXME
-        global ifcgit_repo
 
         # TODO if file isn't saved, offer to save to disk
 
         row = layout.row()
         if path_ifc:
+            # FIXME
+            global ifcgit_repo
             ifcgit_repo = repo_from_path(path_ifc)
             if ifcgit_repo:
                 name_ifc = os.path.relpath(path_ifc, ifcgit_repo.working_dir)
@@ -76,7 +77,9 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             row.label(text="No IFC project saved", icon="FILE")
             return
 
-        if ifcgit_repo.is_dirty(path=path_ifc):
+        is_dirty = ifcgit_repo.is_dirty(path=path_ifc)
+
+        if is_dirty:
             row = layout.row()
             row.label(text="Saved changes have not been committed", icon="ERROR")
 
@@ -121,16 +124,21 @@ class IFCGIT_PT_panel(bpy.types.Panel):
         row = column.row()
         row.operator("ifcgit.refresh", icon="FILE_REFRESH")
 
-        row = column.row()
-        row.operator("ifcgit.display_revision", icon="SELECT_DIFFERENCE")
+        if not is_dirty:
 
-        row = column.row()
-        row.operator("ifcgit.switch_revision", icon="CURRENT_FILE")
+            row = column.row()
+            row.operator("ifcgit.display_revision", icon="SELECT_DIFFERENCE")
 
-        # TODO operator to tag selected
+            row = column.row()
+            row.operator("ifcgit.switch_revision", icon="CURRENT_FILE")
 
-        row = column.row()
-        row.operator("ifcgit.merge", icon="EXPERIMENTAL", text="")
+            # TODO operator to tag selected
+
+            row = column.row()
+            row.operator("ifcgit.merge", icon="EXPERIMENTAL", text="")
+
+        if not context.scene.ifcgit_commits:
+            return
 
         item = context.scene.ifcgit_commits[context.scene.commit_index]
         commit = ifcgit_repo.commit(rev=item.hexsha)
@@ -259,12 +267,6 @@ class DiscardUncommitted(bpy.types.Operator):
     bl_idname = "ifcgit.discard"
     bl_options = {"REGISTER"}
 
-    @classmethod
-    def poll(cls, context):
-        if not ifcgit_repo.is_dirty():
-            return False
-        return True
-
     def execute(self, context):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
@@ -295,8 +297,6 @@ class CommitChanges(bpy.types.Operator):
         ):
             # FIXME allow utf8 branch names
             return False
-        if not ifcgit_repo.is_dirty():
-            return False
         return True
 
     def execute(self, context):
@@ -326,7 +326,7 @@ class RefreshGit(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if ifcgit_repo.heads:
+        if "ifcgit_repo" in globals() and ifcgit_repo != None and ifcgit_repo.heads:
             return True
         return False
 
@@ -339,10 +339,6 @@ class RefreshGit(bpy.types.Operator):
         context.scene.ifcgit_commits.clear()
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-
-        # FIXME
-        global ifcgit_repo
-        ifcgit_repo = repo_from_path(path_ifc)
 
         commits = list(
             git.objects.commit.Commit.iter_items(
@@ -374,12 +370,6 @@ class DisplayRevision(bpy.types.Operator):
     bl_label = ""
     bl_idname = "ifcgit.display_revision"
     bl_options = {"REGISTER"}
-
-    @classmethod
-    def poll(cls, context):
-        if ifcgit_repo.is_dirty():
-            return False
-        return True
 
     def execute(self, context):
 
@@ -417,12 +407,6 @@ class DisplayUncommitted(bpy.types.Operator):
     bl_idname = "ifcgit.display_uncommitted"
     bl_options = {"REGISTER"}
 
-    @classmethod
-    def poll(cls, context):
-        if not ifcgit_repo.is_dirty():
-            return False
-        return True
-
     def execute(self, context):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
@@ -439,11 +423,7 @@ class SwitchRevision(bpy.types.Operator):
     bl_idname = "ifcgit.switch_revision"
     bl_options = {"REGISTER"}
 
-    @classmethod
-    def poll(cls, context):
-        if ifcgit_repo.is_dirty():
-            return False
-        return True
+    # FIXME bad tings happen when switching to a revision that predates current project
 
     def execute(self, context):
 
@@ -468,12 +448,6 @@ class Merge(bpy.types.Operator):
     bl_label = "Merge this branch"
     bl_idname = "ifcgit.merge"
     bl_options = {"REGISTER"}
-
-    @classmethod
-    def poll(cls, context):
-        if ifcgit_repo.is_dirty():
-            return False
-        return True
 
     def execute(self, context):
 
@@ -544,6 +518,13 @@ def repo_from_path(path):
         path_dir = os.path.abspath(os.path.dirname(path))
     else:
         return None
+
+    if (
+        "ifcgit_repo" in globals()
+        and ifcgit_repo != None
+        and ifcgit_repo.working_dir == path_dir
+    ):
+        return ifcgit_repo
 
     try:
         repo = git.Repo(path_dir)
