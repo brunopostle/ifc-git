@@ -289,13 +289,10 @@ class CommitChanges(bpy.types.Operator):
         if context.scene.commit_message == "":
             return False
         if ifcgit_repo.head.is_detached and (
-            context.scene.new_branch_name == ""
-            or not re.match("^[0-9a-zA-Z_-]+$", context.scene.new_branch_name)
-            or re.match("(^[.-]|[.]$)", context.scene.new_branch_name)
+            not is_valid_ref_format(context.scene.new_branch_name)
             or context.scene.new_branch_name
             in [branch.name for branch in ifcgit_repo.branches]
         ):
-            # FIXME allow utf8 branch names
             return False
         return True
 
@@ -496,6 +493,15 @@ class Merge(bpy.types.Operator):
 # FUNCTIONS
 
 
+def is_valid_ref_format(string):
+    """Check a bare branch or tag name is valid"""
+
+    return re.match(
+        "^(?!\.| |-|/)((?!\.\.)(?!.*/\.)(/\*|/\*/)*(?!@\{)[^\~\:\^\\\ \?*\[])+(?<!\.|/)(?<!\.lock)$",
+        string,
+    )
+
+
 def load_project(path_ifc):
     """Clear and load an ifc project"""
 
@@ -541,6 +547,7 @@ def repo_from_path(path):
 def branches_by_hexsha(repo):
     """reverse lookup for branches"""
 
+    # FIXME a hexsha could represent more than one branch
     result = {}
     for branch in repo.branches:
         result[branch.commit.hexsha] = branch
@@ -550,8 +557,16 @@ def branches_by_hexsha(repo):
 def git_branches(self, context):
     """branches enum"""
 
-    # FIXME sort this list but always put 'main' first if present
-    return [(branch.name, branch.name, "") for branch in ifcgit_repo.branches]
+    # NOTE "Python must keep a reference to the strings returned by
+    # the callback or Blender will misbehave or even crash"
+    global branch_names
+    branch_names = sorted([branch.name for branch in ifcgit_repo.heads])
+
+    if "main" in branch_names:
+        branch_names.remove("main")
+        branch_names = ["main"] + branch_names
+
+    return [(myname, myname, myname) for myname in branch_names]
 
 
 def update_revlist(self, context):
