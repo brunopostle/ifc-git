@@ -110,6 +110,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
         column = grouped.column()
         row = column.row()
         row.prop(bpy.context.scene, "display_branch", text="Browse branch")
+        row.prop(bpy.context.scene, "ifcgit_filter", text="Filter revisions")
 
         row = column.row()
         row.template_list(
@@ -356,9 +357,18 @@ class RefreshGit(bpy.types.Operator):
                 paths=[path_ifc],
             )
         )
+        lookup = tags_by_hexsha(ifcgit_repo)
 
-        # TODO option limit to relevant revisions/all revisions/tags/
         for commit in commits:
+
+            if context.scene.ifcgit_filter == "tagged" and not commit.hexsha in lookup:
+                continue
+            elif (
+                context.scene.ifcgit_filter == "relevant"
+                and not commit in commits_relevant
+            ):
+                continue
+
             context.scene.ifcgit_commits.add()
             context.scene.ifcgit_commits[-1].hexsha = commit.hexsha
             if commit in commits_relevant:
@@ -690,6 +700,14 @@ def register():
     bpy.types.Scene.display_branch = bpy.props.EnumProperty(
         items=git_branches, update=update_revlist
     )
+    bpy.types.Scene.ifcgit_filter = bpy.props.EnumProperty(
+        items=[
+            ("all", "All", "All revisions"),
+            ("tagged", "Tagged", "Tagged revisions"),
+            ("relevant", "Relevant", "Revisions for this project"),
+        ],
+        update=update_revlist,
+    )
 
 
 def unregister():
@@ -698,6 +716,7 @@ def unregister():
     del bpy.types.Scene.commit_message
     del bpy.types.Scene.new_branch_name
     del bpy.types.Scene.display_branch
+    del bpy.types.Scene.ifcgit_filter
     bpy.utils.unregister_class(IFCGIT_PT_panel)
     bpy.utils.unregister_class(ListItem)
     bpy.utils.unregister_class(COMMIT_UL_List)
