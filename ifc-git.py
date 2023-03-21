@@ -504,6 +504,7 @@ def load_project(path_ifc):
     for collection in bpy.data.collections:
         if re.match("^IfcProject/", collection.name):
             delete_collection(collection)
+    bpy.data.orphans_purge(do_recursive=True)
 
     bpy.ops.bim.load_project(filepath=path_ifc)
     bpy.ops.ifcgit.refresh()
