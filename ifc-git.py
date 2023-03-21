@@ -183,17 +183,19 @@ class COMMIT_UL_List(bpy.types.UIList):
         commit = ifcgit_repo.commit(rev=item.hexsha)
 
         lookup = branches_by_hexsha(ifcgit_repo)
-        branch_name = ""
+        refs = ""
         if item.hexsha in lookup:
-            branch_name = "[" + lookup[item.hexsha].name + "] "
+            for branch in lookup[item.hexsha]:
+                if branch.name == context.scene.display_branch:
+                    refs = "[" + branch.name + "] "
             # TODO also show tags
 
         if commit == current_revision:
             layout.label(
-                text="[HEAD] " + branch_name + commit.message, icon="DECORATE_KEYFRAME"
+                text="[HEAD] " + refs + commit.message, icon="DECORATE_KEYFRAME"
             )
         else:
-            layout.label(text=branch_name + commit.message, icon="DECORATE_ANIMATE")
+            layout.label(text=refs + commit.message, icon="DECORATE_ANIMATE")
         layout.label(text=time.strftime("%c", time.localtime(commit.committed_date)))
 
 
@@ -429,7 +431,9 @@ class SwitchRevision(bpy.types.Operator):
 
         lookup = branches_by_hexsha(ifcgit_repo)
         if item.hexsha in lookup:
-            lookup[item.hexsha].checkout()
+            for branch in lookup[item.hexsha]:
+                if branch.name == context.scene.display_branch:
+                    branch.checkout()
         else:
             # NOTE this is calling the git binary in a subprocess
             ifcgit_repo.git.checkout(item.hexsha)
@@ -462,26 +466,31 @@ class Merge(bpy.types.Operator):
 
         lookup = branches_by_hexsha(ifcgit_repo)
         if item.hexsha in lookup:
-            # this is a branch!
-            try:
-                # NOTE this is calling the git binary in a subprocess
-                ifcgit_repo.git.merge(lookup[item.hexsha])
-            except git.exc.GitCommandError:
-                # merge is expected to fail, run ifcmerge
-                try:
-                    ifcgit_repo.git.mergetool(tool="ifcmerge")
-                except:
-                    # ifcmerge failed, rollback
-                    ifcgit_repo.git.merge(abort=True)
-                    # FIXME need to report errors somehow
+            for branch in lookup[item.hexsha]:
+                if branch.name == context.scene.display_branch:
+                    # this is a branch!
+                    try:
+                        # NOTE this is calling the git binary in a subprocess
+                        ifcgit_repo.git.merge(branch)
+                    except git.exc.GitCommandError:
+                        # merge is expected to fail, run ifcmerge
+                        try:
+                            ifcgit_repo.git.mergetool(tool="ifcmerge")
+                        except:
+                            # ifcmerge failed, rollback
+                            ifcgit_repo.git.merge(abort=True)
+                            # FIXME need to report errors somehow
 
-                    return {"CANCELLED"}
-            except:
+                            return {"CANCELLED"}
+                    except:
 
-                return {"CANCELLED"}
+                        return {"CANCELLED"}
 
             ifcgit_repo.index.add(path_ifc)
-            context.scene.commit_message = "Merged branch: " + lookup[item.hexsha].name
+            context.scene.commit_message = (
+                "Merged branch: " + context.scene.display_branch
+            )
+            context.scene.display_branch = ifcgit_repo.active_branch.name
 
             load_project(path_ifc)
 
@@ -547,10 +556,12 @@ def repo_from_path(path):
 def branches_by_hexsha(repo):
     """reverse lookup for branches"""
 
-    # FIXME a hexsha could represent more than one branch
     result = {}
     for branch in repo.branches:
-        result[branch.commit.hexsha] = branch
+        if branch.commit.hexsha in result:
+            result[branch.commit.hexsha].append(branch)
+        else:
+            result[branch.commit.hexsha] = [branch]
     return result
 
 
