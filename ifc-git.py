@@ -50,7 +50,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = layout.row()
         if path_ifc:
-            # FIXME
+            # FIXME shouldn't be a global
             global ifcgit_repo
             ifcgit_repo = repo_from_path(path_ifc)
             if ifcgit_repo:
@@ -420,7 +420,7 @@ class SwitchRevision(bpy.types.Operator):
     bl_idname = "ifcgit.switch_revision"
     bl_options = {"REGISTER"}
 
-    # FIXME bad tings happen when switching to a revision that predates current project
+    # FIXME bad things happen when switching to a revision that predates current project
 
     def execute(self, context):
 
@@ -559,14 +559,14 @@ def git_branches(self, context):
 
     # NOTE "Python must keep a reference to the strings returned by
     # the callback or Blender will misbehave or even crash"
-    global branch_names
-    branch_names = sorted([branch.name for branch in ifcgit_repo.heads])
+    global ifcgit_branch_names
+    ifcgit_branch_names = sorted([branch.name for branch in ifcgit_repo.heads])
 
-    if "main" in branch_names:
-        branch_names.remove("main")
-        branch_names = ["main"] + branch_names
+    if "main" in ifcgit_branch_names:
+        ifcgit_branch_names.remove("main")
+        ifcgit_branch_names = ["main"] + ifcgit_branch_names
 
-    return [(myname, myname, myname) for myname in branch_names]
+    return [(myname, myname, myname) for myname in ifcgit_branch_names]
 
 
 def update_revlist(self, context):
