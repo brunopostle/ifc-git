@@ -188,7 +188,11 @@ class COMMIT_UL_List(bpy.types.UIList):
             for branch in lookup[item.hexsha]:
                 if branch.name == context.scene.display_branch:
                     refs = "[" + branch.name + "] "
-            # TODO also show tags
+
+        lookup = tags_by_hexsha(ifcgit_repo)
+        if item.hexsha in lookup:
+            for tag in lookup[item.hexsha]:
+                refs += "{" + tag.name + "} "
 
         if commit == current_revision:
             layout.label(
@@ -562,6 +566,18 @@ def branches_by_hexsha(repo):
             result[branch.commit.hexsha].append(branch)
         else:
             result[branch.commit.hexsha] = [branch]
+    return result
+
+
+def tags_by_hexsha(repo):
+    """reverse lookup for tags"""
+
+    result = {}
+    for tag in repo.tags:
+        if tag.commit.hexsha in result:
+            result[tag.commit.hexsha].append(tag)
+        else:
+            result[tag.commit.hexsha] = [tag]
     return result
 
 
