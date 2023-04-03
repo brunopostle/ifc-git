@@ -413,9 +413,11 @@ class DisplayRevision(bpy.types.Operator):
         modified_shape_object_step_ids = get_modified_shape_object_step_ids(step_ids)
 
         final_step_ids = {}
-        final_step_ids['added'] = step_ids['added']
-        final_step_ids['removed'] = step_ids['removed']
-        final_step_ids['modified'] = step_ids['modified'].union(modified_shape_object_step_ids['modified'])
+        final_step_ids["added"] = step_ids["added"]
+        final_step_ids["removed"] = step_ids["removed"]
+        final_step_ids["modified"] = step_ids["modified"].union(
+            modified_shape_object_step_ids["modified"]
+        )
 
         colourise(final_step_ids)
 
@@ -504,9 +506,11 @@ class Merge(bpy.types.Operator):
                             ifcgit_repo.git.merge(abort=True)
                             # FIXME need to report errors somehow
 
+                            self.report({"ERROR"}, "IFC Merge failed")
                             return {"CANCELLED"}
                     except:
 
+                        self.report({"ERROR"}, "Unknown IFC Merge failure")
                         return {"CANCELLED"}
 
             ifcgit_repo.index.add(path_ifc)
@@ -651,14 +655,15 @@ def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
         "removed": deleted.difference(modified),
     }
 
+
 def get_modified_shape_object_step_ids(step_ids):
     model = tool.Ifc.get()
-    modified_shape_object_step_ids = {'modified' : []}
+    modified_shape_object_step_ids = {"modified": []}
 
-    for step_id in step_ids['modified']:
-        if model.by_id(step_id).is_a() == 'IfcProductDefinitionShape':
+    for step_id in step_ids["modified"]:
+        if model.by_id(step_id).is_a() == "IfcProductDefinitionShape":
             product = model.by_id(step_id).ShapeOfProduct[0]
-            modified_shape_object_step_ids['modified'].append(product.id())
+            modified_shape_object_step_ids["modified"].append(product.id())
 
     return modified_shape_object_step_ids
 
