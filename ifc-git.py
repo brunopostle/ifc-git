@@ -4,6 +4,8 @@ import git
 import bpy
 import time
 from blenderbim.bim.ifc import IfcStore
+import blenderbim.tool as tool
+
 
 bl_info = {
     "name": "IFC Git",
@@ -408,7 +410,14 @@ class DisplayRevision(bpy.types.Operator):
                 ifcgit_repo, current_revision.hexsha, selected_revision.hexsha, path_ifc
             )
 
-        colourise(step_ids)
+        modified_shape_object_step_ids = get_modified_shape_object_step_ids(step_ids)
+
+        final_step_ids = {}
+        final_step_ids['added'] = step_ids['added']
+        final_step_ids['removed'] = step_ids['removed']
+        final_step_ids['modified'] = step_ids['modified'].union(modified_shape_object_step_ids['modified'])
+
+        colourise(final_step_ids)
 
         return {"FINISHED"}
 
@@ -641,6 +650,17 @@ def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
         "added": inserted.difference(modified),
         "removed": deleted.difference(modified),
     }
+
+def get_modified_shape_object_step_ids(step_ids):
+    model = tool.Ifc.get()
+    modified_shape_object_step_ids = {'modified' : []}
+
+    for step_id in step_ids['modified']:
+        if model.by_id(step_id).is_a() == 'IfcProductDefinitionShape':
+            product = model.by_id(step_id).ShapeOfProduct[0]
+            modified_shape_object_step_ids['modified'].append(product.id())
+
+    return modified_shape_object_step_ids
 
 
 def colourise(step_ids):
