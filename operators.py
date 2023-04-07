@@ -3,6 +3,17 @@ import re
 import git
 import bpy
 
+from tool import (
+    is_valid_ref_format,
+    load_project,
+    repo_from_path,
+    branches_by_hexsha,
+    tags_by_hexsha,
+    ifc_diff_ids,
+    get_modified_shape_object_step_ids,
+    colourise,
+)
+
 
 class CreateRepo(bpy.types.Operator):
     """Initialise a Git repository"""
@@ -75,6 +86,7 @@ class DiscardUncommitted(bpy.types.Operator):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         # NOTE this is calling the git binary in a subprocess
+        global ifcgit_repo
         ifcgit_repo.git.checkout(path_ifc)
         load_project(path_ifc)
 
@@ -92,7 +104,8 @@ class CommitChanges(bpy.types.Operator):
     def poll(cls, context):
         if context.scene.commit_message == "":
             return False
-        if ifcgit_repo.head.is_detached and (
+        global ifcgit_repo
+        if ifcgit_repo and ifcgit_repo.head.is_detached and (
             not is_valid_ref_format(context.scene.new_branch_name)
             or context.scene.new_branch_name
             in [branch.name for branch in ifcgit_repo.branches]
@@ -103,6 +116,7 @@ class CommitChanges(bpy.types.Operator):
     def execute(self, context):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        global ifcgit_repo
         ifcgit_repo.index.add(path_ifc)
         ifcgit_repo.index.commit(message=context.scene.commit_message)
         context.scene.commit_message = ""
@@ -127,6 +141,7 @@ class RefreshGit(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
+        global ifcgit_repo
         if "ifcgit_repo" in globals() and ifcgit_repo != None and ifcgit_repo.heads:
             return True
         return False
@@ -135,6 +150,7 @@ class RefreshGit(bpy.types.Operator):
 
         area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
         area.spaces[0].shading.color_type = "MATERIAL"
+        global ifcgit_repo
 
         # ifcgit_commits is registered list widget
         context.scene.ifcgit_commits.clear()
@@ -186,6 +202,7 @@ class DisplayRevision(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
+        global ifcgit_repo
         selected_revision = ifcgit_repo.commit(rev=item.hexsha)
         current_revision = ifcgit_repo.commit()
 
@@ -228,6 +245,7 @@ class DisplayUncommitted(bpy.types.Operator):
 
     def execute(self, context):
 
+        global ifcgit_repo
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         step_ids = ifc_diff_ids(ifcgit_repo, None, "HEAD", path_ifc)
         colourise(step_ids)
@@ -249,6 +267,7 @@ class SwitchRevision(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
+        global ifcgit_repo
         lookup = branches_by_hexsha(ifcgit_repo)
         if item.hexsha in lookup:
             for branch in lookup[item.hexsha]:
@@ -275,6 +294,7 @@ class Merge(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
+        global ifcgit_repo
         config_reader = ifcgit_repo.config_reader()
         section = 'mergetool "ifcmerge"'
         if not config_reader.has_section(section):

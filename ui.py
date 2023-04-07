@@ -1,6 +1,12 @@
 import os
 import bpy
 
+from tool import (
+    repo_from_path,
+    branches_by_hexsha,
+    tags_by_hexsha,
+)
+
 
 class IFCGIT_PT_panel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""
@@ -126,3 +132,34 @@ class IFCGIT_PT_panel(bpy.types.Panel):
         row.label(text=commit.author.name + " <" + commit.author.email + ">")
         row = column.row()
         row.label(text=commit.message)
+
+
+class COMMIT_UL_List(bpy.types.UIList):
+    """List of Git commits"""
+
+    def draw_item(
+        self, context, layout, data, item, icon, active_data, active_propname, index
+    ):
+
+        current_revision = ifcgit_repo.commit()
+        commit = ifcgit_repo.commit(rev=item.hexsha)
+
+        lookup = branches_by_hexsha(ifcgit_repo)
+        refs = ""
+        if item.hexsha in lookup:
+            for branch in lookup[item.hexsha]:
+                if branch.name == context.scene.display_branch:
+                    refs = "[" + branch.name + "] "
+
+        lookup = tags_by_hexsha(ifcgit_repo)
+        if item.hexsha in lookup:
+            for tag in lookup[item.hexsha]:
+                refs += "{" + tag.name + "} "
+
+        if commit == current_revision:
+            layout.label(
+                text="[HEAD] " + refs + commit.message, icon="DECORATE_KEYFRAME"
+            )
+        else:
+            layout.label(text=refs + commit.message, icon="DECORATE_ANIMATE")
+        layout.label(text=time.strftime("%c", time.localtime(commit.committed_date)))
