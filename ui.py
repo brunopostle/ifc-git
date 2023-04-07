@@ -10,6 +10,7 @@ from tool import (
 
 from data import IfcGit
 
+
 class IFCGIT_PT_panel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""
 

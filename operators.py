@@ -16,6 +16,7 @@ from tool import (
 
 from data import IfcGit
 
+
 class CreateRepo(bpy.types.Operator):
     """Initialise a Git repository"""
 
@@ -104,10 +105,14 @@ class CommitChanges(bpy.types.Operator):
     def poll(cls, context):
         if context.scene.commit_message == "":
             return False
-        if IfcGit.repo and IfcGit.repo.head.is_detached and (
-            not is_valid_ref_format(context.scene.new_branch_name)
-            or context.scene.new_branch_name
-            in [branch.name for branch in IfcGit.repo.branches]
+        if (
+            IfcGit.repo
+            and IfcGit.repo.head.is_detached
+            and (
+                not is_valid_ref_format(context.scene.new_branch_name)
+                or context.scene.new_branch_name
+                in [branch.name for branch in IfcGit.repo.branches]
+            )
         ):
             return False
         return True

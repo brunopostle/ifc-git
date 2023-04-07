@@ -23,8 +23,11 @@ from operators import (
 )
 import ui
 from ui import IFCGIT_PT_panel, COMMIT_UL_List
+import prop
+from prop import ListItem
 
 from tool import update_revlist, git_branches
+
 
 # import ui, prop, operator
 
@@ -38,6 +41,7 @@ classes = (
     operators.Merge,
     operators.RefreshGit,
     operators.SwitchRevision,
+    prop.ListItem,
     ui.IFCGIT_PT_panel,
     ui.COMMIT_UL_List,
 )
@@ -66,21 +70,6 @@ bl_info = {
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # 2023 Bruno Postle <bruno@postle.net>
-
-
-class ListItem(bpy.types.PropertyGroup):
-    """Group of properties representing an item in the list."""
-
-    hexsha: bpy.props.StringProperty(
-        name="Git hash",
-        description="checksum for this commit",
-        default="Uncommitted data!",
-    )
-    relevant: bpy.props.BoolProperty(
-        name="Is relevant",
-        description="does this commit reference our ifc file",
-        default=False,
-    )
 
 
 def register():

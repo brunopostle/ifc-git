@@ -7,6 +7,7 @@ import blenderbim.tool
 
 from data import IfcGit
 
+
 def is_valid_ref_format(string):
     """Check a bare branch or tag name is valid"""
 
@@ -40,10 +41,7 @@ def repo_from_path(path):
     else:
         return None
 
-    if (
-        IfcGit.repo != None
-        and IfcGit.repo.working_dir == path_dir
-    ):
+    if IfcGit.repo != None and IfcGit.repo.working_dir == path_dir:
         return IfcGit.repo
 
     try:
