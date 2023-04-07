@@ -1,10 +1,6 @@
 import os
 import sys
-import re
-import git
 import bpy
-from blenderbim.bim.ifc import IfcStore
-import blenderbim.tool as tool
 
 sys.path.insert(0, "/home/bruno/src/ifc-git")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
