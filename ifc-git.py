@@ -43,6 +43,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
     bl_region_type = "WINDOW"
     bl_context = "scene"
     bl_options = {"DEFAULT_CLOSED"}
+    bl_parent_id = "BIM_PT_project_info"
 
     def draw(self, context):
         layout = self.layout
