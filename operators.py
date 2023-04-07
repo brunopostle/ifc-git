@@ -14,6 +14,7 @@ from tool import (
     colourise,
 )
 
+from data import IfcGit
 
 class CreateRepo(bpy.types.Operator):
     """Initialise a Git repository"""
@@ -86,8 +87,7 @@ class DiscardUncommitted(bpy.types.Operator):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         # NOTE this is calling the git binary in a subprocess
-        global ifcgit_repo
-        ifcgit_repo.git.checkout(path_ifc)
+        IfcGit.repo.git.checkout(path_ifc)
         load_project(path_ifc)
 
         return {"FINISHED"}
@@ -104,11 +104,10 @@ class CommitChanges(bpy.types.Operator):
     def poll(cls, context):
         if context.scene.commit_message == "":
             return False
-        global ifcgit_repo
-        if ifcgit_repo and ifcgit_repo.head.is_detached and (
+        if IfcGit.repo and IfcGit.repo.head.is_detached and (
             not is_valid_ref_format(context.scene.new_branch_name)
             or context.scene.new_branch_name
-            in [branch.name for branch in ifcgit_repo.branches]
+            in [branch.name for branch in IfcGit.repo.branches]
         ):
             return False
         return True
@@ -116,13 +115,12 @@ class CommitChanges(bpy.types.Operator):
     def execute(self, context):
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-        global ifcgit_repo
-        ifcgit_repo.index.add(path_ifc)
-        ifcgit_repo.index.commit(message=context.scene.commit_message)
+        IfcGit.repo.index.add(path_ifc)
+        IfcGit.repo.index.commit(message=context.scene.commit_message)
         context.scene.commit_message = ""
 
-        if ifcgit_repo.head.is_detached:
-            new_branch = ifcgit_repo.create_head(context.scene.new_branch_name)
+        if IfcGit.repo.head.is_detached:
+            new_branch = IfcGit.repo.create_head(context.scene.new_branch_name)
             new_branch.checkout()
             context.scene.display_branch = context.scene.new_branch_name
             context.scene.new_branch_name = ""
@@ -141,8 +139,7 @@ class RefreshGit(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        global ifcgit_repo
-        if "ifcgit_repo" in globals() and ifcgit_repo != None and ifcgit_repo.heads:
+        if IfcGit.repo != None and IfcGit.repo.heads:
             return True
         return False
 
@@ -150,7 +147,6 @@ class RefreshGit(bpy.types.Operator):
 
         area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
         area.spaces[0].shading.color_type = "MATERIAL"
-        global ifcgit_repo
 
         # ifcgit_commits is registered list widget
         context.scene.ifcgit_commits.clear()
@@ -159,18 +155,18 @@ class RefreshGit(bpy.types.Operator):
 
         commits = list(
             git.objects.commit.Commit.iter_items(
-                repo=ifcgit_repo,
+                repo=IfcGit.repo,
                 rev=[context.scene.display_branch],
             )
         )
         commits_relevant = list(
             git.objects.commit.Commit.iter_items(
-                repo=ifcgit_repo,
+                repo=IfcGit.repo,
                 rev=[context.scene.display_branch],
                 paths=[path_ifc],
             )
         )
-        lookup = tags_by_hexsha(ifcgit_repo)
+        lookup = tags_by_hexsha(IfcGit.repo)
 
         for commit in commits:
 
@@ -202,9 +198,8 @@ class DisplayRevision(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
-        global ifcgit_repo
-        selected_revision = ifcgit_repo.commit(rev=item.hexsha)
-        current_revision = ifcgit_repo.commit()
+        selected_revision = IfcGit.repo.commit(rev=item.hexsha)
+        current_revision = IfcGit.repo.commit()
 
         if selected_revision == current_revision:
             area = next(
@@ -215,11 +210,11 @@ class DisplayRevision(bpy.types.Operator):
 
         if current_revision.committed_date > selected_revision.committed_date:
             step_ids = ifc_diff_ids(
-                ifcgit_repo, selected_revision.hexsha, current_revision.hexsha, path_ifc
+                IfcGit.repo, selected_revision.hexsha, current_revision.hexsha, path_ifc
             )
         else:
             step_ids = ifc_diff_ids(
-                ifcgit_repo, current_revision.hexsha, selected_revision.hexsha, path_ifc
+                IfcGit.repo, current_revision.hexsha, selected_revision.hexsha, path_ifc
             )
 
         modified_shape_object_step_ids = get_modified_shape_object_step_ids(step_ids)
@@ -245,9 +240,8 @@ class DisplayUncommitted(bpy.types.Operator):
 
     def execute(self, context):
 
-        global ifcgit_repo
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-        step_ids = ifc_diff_ids(ifcgit_repo, None, "HEAD", path_ifc)
+        step_ids = ifc_diff_ids(IfcGit.repo, None, "HEAD", path_ifc)
         colourise(step_ids)
 
         return {"FINISHED"}
@@ -267,15 +261,14 @@ class SwitchRevision(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
-        global ifcgit_repo
-        lookup = branches_by_hexsha(ifcgit_repo)
+        lookup = branches_by_hexsha(IfcGit.repo)
         if item.hexsha in lookup:
             for branch in lookup[item.hexsha]:
                 if branch.name == context.scene.display_branch:
                     branch.checkout()
         else:
             # NOTE this is calling the git binary in a subprocess
-            ifcgit_repo.git.checkout(item.hexsha)
+            IfcGit.repo.git.checkout(item.hexsha)
 
         load_project(path_ifc)
 
@@ -294,31 +287,30 @@ class Merge(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         item = context.scene.ifcgit_commits[context.scene.commit_index]
 
-        global ifcgit_repo
-        config_reader = ifcgit_repo.config_reader()
+        config_reader = IfcGit.repo.config_reader()
         section = 'mergetool "ifcmerge"'
         if not config_reader.has_section(section):
-            config_writer = ifcgit_repo.config_writer()
+            config_writer = IfcGit.repo.config_writer()
             config_writer.set_value(
                 section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED"
             )
             config_writer.set_value(section, "trustExitCode", True)
 
-        lookup = branches_by_hexsha(ifcgit_repo)
+        lookup = branches_by_hexsha(IfcGit.repo)
         if item.hexsha in lookup:
             for branch in lookup[item.hexsha]:
                 if branch.name == context.scene.display_branch:
                     # this is a branch!
                     try:
                         # NOTE this is calling the git binary in a subprocess
-                        ifcgit_repo.git.merge(branch)
+                        IfcGit.repo.git.merge(branch)
                     except git.exc.GitCommandError:
                         # merge is expected to fail, run ifcmerge
                         try:
-                            ifcgit_repo.git.mergetool(tool="ifcmerge")
+                            IfcGit.repo.git.mergetool(tool="ifcmerge")
                         except:
                             # ifcmerge failed, rollback
-                            ifcgit_repo.git.merge(abort=True)
+                            IfcGit.repo.git.merge(abort=True)
                             # FIXME need to report errors somehow
 
                             self.report({"ERROR"}, "IFC Merge failed")
@@ -328,11 +320,11 @@ class Merge(bpy.types.Operator):
                         self.report({"ERROR"}, "Unknown IFC Merge failure")
                         return {"CANCELLED"}
 
-            ifcgit_repo.index.add(path_ifc)
+            IfcGit.repo.index.add(path_ifc)
             context.scene.commit_message = (
                 "Merged branch: " + context.scene.display_branch
             )
-            context.scene.display_branch = ifcgit_repo.active_branch.name
+            context.scene.display_branch = IfcGit.repo.active_branch.name
 
             load_project(path_ifc)
 

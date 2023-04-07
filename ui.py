@@ -1,5 +1,6 @@
 import os
 import bpy
+import time
 
 from tool import (
     repo_from_path,
@@ -7,6 +8,7 @@ from tool import (
     tags_by_hexsha,
 )
 
+from data import IfcGit
 
 class IFCGIT_PT_panel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""
@@ -26,13 +28,11 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = layout.row()
         if path_ifc:
-            # FIXME shouldn't be a global
-            global ifcgit_repo
-            ifcgit_repo = repo_from_path(path_ifc)
-            if ifcgit_repo:
-                name_ifc = os.path.relpath(path_ifc, ifcgit_repo.working_dir)
-                row.label(text=ifcgit_repo.working_dir, icon="SYSTEM")
-                if name_ifc in ifcgit_repo.untracked_files:
+            IfcGit.repo = repo_from_path(path_ifc)
+            if IfcGit.repo:
+                name_ifc = os.path.relpath(path_ifc, IfcGit.repo.working_dir)
+                row.label(text=IfcGit.repo.working_dir, icon="SYSTEM")
+                if name_ifc in IfcGit.repo.untracked_files:
                     row.operator(
                         "ifcgit.addfile",
                         text="Add '" + name_ifc + "' to repository",
@@ -53,7 +53,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             row.label(text="No IFC project saved", icon="FILE")
             return
 
-        is_dirty = ifcgit_repo.is_dirty(path=path_ifc)
+        is_dirty = IfcGit.repo.is_dirty(path=path_ifc)
 
         if is_dirty:
             row = layout.row()
@@ -66,7 +66,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             row = layout.row()
             row.prop(context.scene, "commit_message")
 
-            if ifcgit_repo.head.is_detached:
+            if IfcGit.repo.head.is_detached:
                 row = layout.row()
                 row.label(
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
@@ -77,10 +77,10 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
 
         row = layout.row()
-        if ifcgit_repo.head.is_detached:
+        if IfcGit.repo.head.is_detached:
             row.label(text="Working branch: Detached HEAD")
         else:
-            row.label(text="Working branch: " + ifcgit_repo.active_branch.name)
+            row.label(text="Working branch: " + IfcGit.repo.active_branch.name)
 
         grouped = layout.row()
         column = grouped.column()
@@ -118,7 +118,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             return
 
         item = context.scene.ifcgit_commits[context.scene.commit_index]
-        commit = ifcgit_repo.commit(rev=item.hexsha)
+        commit = IfcGit.repo.commit(rev=item.hexsha)
 
         if not item.relevant:
             row = layout.row()
@@ -141,17 +141,17 @@ class COMMIT_UL_List(bpy.types.UIList):
         self, context, layout, data, item, icon, active_data, active_propname, index
     ):
 
-        current_revision = ifcgit_repo.commit()
-        commit = ifcgit_repo.commit(rev=item.hexsha)
+        current_revision = IfcGit.repo.commit()
+        commit = IfcGit.repo.commit(rev=item.hexsha)
 
-        lookup = branches_by_hexsha(ifcgit_repo)
+        lookup = branches_by_hexsha(IfcGit.repo)
         refs = ""
         if item.hexsha in lookup:
             for branch in lookup[item.hexsha]:
                 if branch.name == context.scene.display_branch:
                     refs = "[" + branch.name + "] "
 
-        lookup = tags_by_hexsha(ifcgit_repo)
+        lookup = tags_by_hexsha(IfcGit.repo)
         if item.hexsha in lookup:
             for tag in lookup[item.hexsha]:
                 refs += "{" + tag.name + "} "

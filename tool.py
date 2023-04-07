@@ -5,6 +5,7 @@ import bpy
 from blenderbim.bim.ifc import IfcStore
 import blenderbim.tool
 
+from data import IfcGit
 
 def is_valid_ref_format(string):
     """Check a bare branch or tag name is valid"""
@@ -39,13 +40,11 @@ def repo_from_path(path):
     else:
         return None
 
-    global ifcgit_repo
     if (
-        "ifcgit_repo" in globals()
-        and ifcgit_repo != None
-        and ifcgit_repo.working_dir == path_dir
+        IfcGit.repo != None
+        and IfcGit.repo.working_dir == path_dir
     ):
-        return ifcgit_repo
+        return IfcGit.repo
 
     try:
         repo = git.Repo(path_dir)
@@ -56,7 +55,7 @@ def repo_from_path(path):
             return None
         return repo_from_path(parentdir_path)
     if repo:
-        ifcgit_repo = repo
+        IfcGit.repo = repo
     return repo
 
 
@@ -89,15 +88,13 @@ def git_branches(self, context):
 
     # NOTE "Python must keep a reference to the strings returned by
     # the callback or Blender will misbehave or even crash"
-    global ifcgit_branch_names
-    global ifcgit_repo
-    ifcgit_branch_names = sorted([branch.name for branch in ifcgit_repo.heads])
+    IfcGit.branch_names = sorted([branch.name for branch in IfcGit.repo.heads])
 
-    if "main" in ifcgit_branch_names:
-        ifcgit_branch_names.remove("main")
-        ifcgit_branch_names = ["main"] + ifcgit_branch_names
+    if "main" in IfcGit.branch_names:
+        IfcGit.branch_names.remove("main")
+        IfcGit.branch_names = ["main"] + IfcGit.branch_names
 
-    return [(myname, myname, myname) for myname in ifcgit_branch_names]
+    return [(myname, myname, myname) for myname in IfcGit.branch_names]
 
 
 def update_revlist(self, context):

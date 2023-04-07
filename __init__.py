@@ -3,7 +3,6 @@ import sys
 import re
 import git
 import bpy
-import time
 from blenderbim.bim.ifc import IfcStore
 import blenderbim.tool as tool
 
