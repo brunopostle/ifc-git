@@ -81,31 +81,7 @@ def register():
     bpy.utils.register_class(DisplayUncommitted)
     bpy.utils.register_class(SwitchRevision)
     bpy.utils.register_class(Merge)
-    bpy.types.Scene.ifcgit_commits = bpy.props.CollectionProperty(type=ListItem)
-    bpy.types.Scene.commit_index = bpy.props.IntProperty(
-        name="Index for my_list", default=0
-    )
-    bpy.types.Scene.commit_message = bpy.props.StringProperty(
-        name="Commit message",
-        description="A human readable description of these changes",
-        default="",
-    )
-    bpy.types.Scene.new_branch_name = bpy.props.StringProperty(
-        name="New branch name",
-        description="A short name used to refer to this branch",
-        default="",
-    )
-    bpy.types.Scene.display_branch = bpy.props.EnumProperty(
-        items=git_branches, update=update_revlist
-    )
-    bpy.types.Scene.ifcgit_filter = bpy.props.EnumProperty(
-        items=[
-            ("all", "All", "All revisions"),
-            ("tagged", "Tagged", "Tagged revisions"),
-            ("relevant", "Relevant", "Revisions for this project"),
-        ],
-        update=update_revlist,
-    )
+    bpy.types.Scene.IfcGitProperties = bpy.props.PointerProperty(type=prop.IfcGitProperties)
 
 
 def unregister():
@@ -127,7 +103,7 @@ def unregister():
     bpy.utils.unregister_class(DisplayUncommitted)
     bpy.utils.unregister_class(SwitchRevision)
     bpy.utils.unregister_class(Merge)
-
+    del bpy.types.Scene.IfcGitProperties
 
 if __name__ == "__main__":
     register()
