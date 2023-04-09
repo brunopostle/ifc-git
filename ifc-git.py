@@ -99,6 +99,12 @@ class IFCGIT_PT_panel(bpy.types.Panel):
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
                 )
                 row.prop(context.scene, "new_branch_name")
+                if context.scene.commit_message == "":
+                    row = layout.row()
+                    row.label(text="Your commit message is empty. Please insert a commit message", icon="CANCEL")
+                if not is_valid_branch_name(context.scene.new_branch_name, ifcgit_repo):
+                    row = layout.row()
+                    row.label(text="The new branch name is invalid, please insert a valid branch name (eg. with no spaces, ...)", icon="CANCEL")
 
             row = layout.row()
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
@@ -298,13 +304,8 @@ class CommitChanges(bpy.types.Operator):
     def poll(cls, context):
         if context.scene.commit_message == "":
             return False
-        if ifcgit_repo.head.is_detached and (
-            not is_valid_ref_format(context.scene.new_branch_name)
-            or context.scene.new_branch_name
-            in [branch.name for branch in ifcgit_repo.branches]
-        ):
-            return False
-        return True
+        else:
+            return is_valid_branch_name(context.scene.new_branch_name, ifcgit_repo)
 
     def execute(self, context):
 
@@ -537,6 +538,16 @@ def is_valid_ref_format(string):
         "^(?!\.| |-|/)((?!\.\.)(?!.*/\.)(/\*|/\*/)*(?!@\{)[^\~\:\^\\\ \?*\[])+(?<!\.|/)(?<!\.lock)$",
         string,
     )
+
+def is_valid_branch_name(new_branch_name, ifcgit_repo):
+    """Check if a branch name is valid given the new branch name and the ifcgit_repo"""
+    if ifcgit_repo.head.is_detached and (
+        not is_valid_ref_format(new_branch_name)
+        or new_branch_name
+        in [branch.name for branch in ifcgit_repo.branches]
+    ):
+        return False
+    return True
 
 
 def load_project(path_ifc):
