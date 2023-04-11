@@ -83,14 +83,15 @@ class CommitChanges(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if context.scene.commit_message == "":
+        props = context.scene.IfcGitProperties
+        if props.commit_message == "":
             return False
         if (
             IfcGitData.data["repo"]
             and IfcGitData.data["repo"].head.is_detached
             and (
-                not is_valid_ref_format(context.scene.new_branch_name)
-                or context.scene.new_branch_name
+                not is_valid_ref_format(props.new_branch_name)
+                or props.new_branch_name
                 in [branch.name for branch in IfcGitData.data["repo"].branches]
             )
         ):
