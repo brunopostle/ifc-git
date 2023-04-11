@@ -1,4 +1,3 @@
-import bpy
 from bpy.types import PropertyGroup
 
 from bpy.props import (
@@ -11,29 +10,26 @@ from bpy.props import (
 
 from tool import update_revlist, git_branches
 
-    
 
 class IfcGitListItem(PropertyGroup):
     """Group of properties representing an item in the list."""
 
-    hexsha: bpy.props.StringProperty(
+    hexsha: StringProperty(
         name="Git hash",
         description="checksum for this commit",
         default="Uncommitted data!",
     )
-    relevant: bpy.props.BoolProperty(
+    relevant: BoolProperty(
         name="Is relevant",
         description="does this commit reference our ifc file",
         default=False,
     )
 
+
 class IfcGitProperties(PropertyGroup):
 
-    
     ifcgit_commits: CollectionProperty(type=IfcGitListItem, name="List of git items")
-    commit_index: IntProperty(
-        name="Index for my_list", default=0
-    )
+    commit_index: IntProperty(name="Index for my_list", default=0)
     commit_message: StringProperty(
         name="Commit message",
         description="A human readable description of these changes",
@@ -44,9 +40,7 @@ class IfcGitProperties(PropertyGroup):
         description="A short name used to refer to this branch",
         default="",
     )
-    display_branch: EnumProperty(
-        items=git_branches, update=update_revlist
-    )
+    display_branch: EnumProperty(items=git_branches, update=update_revlist)
     ifcgit_filter: EnumProperty(
         items=[
             ("all", "All", "All revisions"),
