@@ -20,9 +20,7 @@ from operators import (
 import ui
 from ui import IFCGIT_PT_panel, COMMIT_UL_List
 import prop
-from prop import ListItem
-
-from tool import update_revlist, git_branches
+from prop import IfcGitListItem, IfcGitProperties
 
 
 # import ui, prop, operator
@@ -37,7 +35,8 @@ classes = (
     operators.Merge,
     operators.RefreshGit,
     operators.SwitchRevision,
-    prop.ListItem,
+    prop.IfcGitListItem,
+    prop.IfcGitProperties,
     ui.IFCGIT_PT_panel,
     ui.COMMIT_UL_List,
 )
@@ -70,7 +69,8 @@ bl_info = {
 
 def register():
     bpy.utils.register_class(IFCGIT_PT_panel)
-    bpy.utils.register_class(ListItem)
+    bpy.utils.register_class(IfcGitListItem)
+    bpy.utils.register_class(IfcGitProperties)
     bpy.utils.register_class(COMMIT_UL_List)
     bpy.utils.register_class(CreateRepo)
     bpy.utils.register_class(AddFileToRepo)
@@ -81,31 +81,7 @@ def register():
     bpy.utils.register_class(DisplayUncommitted)
     bpy.utils.register_class(SwitchRevision)
     bpy.utils.register_class(Merge)
-    bpy.types.Scene.ifcgit_commits = bpy.props.CollectionProperty(type=ListItem)
-    bpy.types.Scene.commit_index = bpy.props.IntProperty(
-        name="Index for my_list", default=0
-    )
-    bpy.types.Scene.commit_message = bpy.props.StringProperty(
-        name="Commit message",
-        description="A human readable description of these changes",
-        default="",
-    )
-    bpy.types.Scene.new_branch_name = bpy.props.StringProperty(
-        name="New branch name",
-        description="A short name used to refer to this branch",
-        default="",
-    )
-    bpy.types.Scene.display_branch = bpy.props.EnumProperty(
-        items=git_branches, update=update_revlist
-    )
-    bpy.types.Scene.ifcgit_filter = bpy.props.EnumProperty(
-        items=[
-            ("all", "All", "All revisions"),
-            ("tagged", "Tagged", "Tagged revisions"),
-            ("relevant", "Relevant", "Revisions for this project"),
-        ],
-        update=update_revlist,
-    )
+    bpy.types.Scene.IfcGitProperties = bpy.props.PointerProperty(type=prop.IfcGitProperties)
 
 
 def unregister():
@@ -116,7 +92,8 @@ def unregister():
     del bpy.types.Scene.display_branch
     del bpy.types.Scene.ifcgit_filter
     bpy.utils.unregister_class(IFCGIT_PT_panel)
-    bpy.utils.unregister_class(ListItem)
+    bpy.utils.unregister_class(IfcGitListItem)
+    bpy.utils.unregister_class(IfcGitProperties)
     bpy.utils.unregister_class(COMMIT_UL_List)
     bpy.utils.unregister_class(CreateRepo)
     bpy.utils.unregister_class(AddFileToRepo)
@@ -127,7 +104,7 @@ def unregister():
     bpy.utils.unregister_class(DisplayUncommitted)
     bpy.utils.unregister_class(SwitchRevision)
     bpy.utils.unregister_class(Merge)
-
+    del bpy.types.Scene.IfcGitProperties
 
 if __name__ == "__main__":
     register()

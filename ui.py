@@ -26,6 +26,8 @@ class IFCGIT_PT_panel(bpy.types.Panel):
         layout = self.layout
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
 
+        props = context.scene.IfcGitProperties
+
         # TODO if file isn't saved, offer to save to disk
 
         row = layout.row()
@@ -68,16 +70,16 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             row.operator("ifcgit.discard", icon="TRASH")
 
             row = layout.row()
-            row.prop(context.scene, "commit_message")
+            row.prop(props, "commit_message")
 
             if IfcGitData.data["repo"].head.is_detached:
                 row = layout.row()
                 row.label(
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
                 )
-                row.prop(context.scene, "new_branch_name")
-                if context.scene.new_branch_name and not is_valid_branch_name(
-                    context.scene.new_branch_name
+                row.prop(props, "new_branch_name")
+                if props.new_branch_name and not is_valid_branch_name(
+                    props.new_branch_name
                 ):
                     row = layout.row()
                     row.label(
@@ -99,16 +101,16 @@ class IFCGIT_PT_panel(bpy.types.Panel):
         grouped = layout.row()
         column = grouped.column()
         row = column.row()
-        row.prop(bpy.context.scene, "display_branch", text="Browse branch")
-        row.prop(bpy.context.scene, "ifcgit_filter", text="Filter revisions")
+        row.prop(props, "display_branch", text="Browse branch")
+        row.prop(props, "ifcgit_filter", text="Filter revisions")
 
         row = column.row()
         row.template_list(
             "COMMIT_UL_List",
             "The_List",
-            context.scene,
+            props,
             "ifcgit_commits",
-            context.scene,
+            props,
             "commit_index",
         )
         column = grouped.column()
@@ -128,10 +130,10 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             row = column.row()
             row.operator("ifcgit.merge", icon="EXPERIMENTAL", text="")
 
-        if not context.scene.ifcgit_commits:
+        if not props.ifcgit_commits:
             return
 
-        item = context.scene.ifcgit_commits[context.scene.commit_index]
+        item = props.ifcgit_commits[props.commit_index]
         commit = IfcGitData.data["repo"].commit(rev=item.hexsha)
 
         if not item.relevant:
@@ -155,6 +157,7 @@ class COMMIT_UL_List(bpy.types.UIList):
         self, context, layout, data, item, icon, active_data, active_propname, index
     ):
 
+        props = context.scene.IfcGitProperties
         current_revision = IfcGitData.data["repo"].commit()
         commit = IfcGitData.data["repo"].commit(rev=item.hexsha)
 
@@ -162,7 +165,7 @@ class COMMIT_UL_List(bpy.types.UIList):
         refs = ""
         if item.hexsha in lookup:
             for branch in lookup[item.hexsha]:
-                if branch.name == context.scene.display_branch:
+                if branch.name == props.display_branch:
                     refs = "[" + branch.name + "] "
 
         lookup = tags_by_hexsha(IfcGitData.data["repo"])
