@@ -85,12 +85,6 @@ def register():
 
 
 def unregister():
-    del bpy.types.Scene.ifcgit_commits
-    del bpy.types.Scene.commit_index
-    del bpy.types.Scene.commit_message
-    del bpy.types.Scene.new_branch_name
-    del bpy.types.Scene.display_branch
-    del bpy.types.Scene.ifcgit_filter
     bpy.utils.unregister_class(IFCGIT_PT_panel)
     bpy.utils.unregister_class(IfcGitListItem)
     bpy.utils.unregister_class(IfcGitProperties)
