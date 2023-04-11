@@ -20,9 +20,7 @@ from operators import (
 import ui
 from ui import IFCGIT_PT_panel, COMMIT_UL_List
 import prop
-from prop import ListItem
-
-from tool import update_revlist, git_branches
+from prop import IfcGitListItem, IfcGitProperties
 
 
 # import ui, prop, operator
@@ -37,7 +35,8 @@ classes = (
     operators.Merge,
     operators.RefreshGit,
     operators.SwitchRevision,
-    prop.ListItem,
+    prop.IfcGitListItem,
+    prop.IfcGitProperties,
     ui.IFCGIT_PT_panel,
     ui.COMMIT_UL_List,
 )
@@ -70,7 +69,8 @@ bl_info = {
 
 def register():
     bpy.utils.register_class(IFCGIT_PT_panel)
-    bpy.utils.register_class(ListItem)
+    bpy.utils.register_class(IfcGitListItem)
+    bpy.utils.register_class(IfcGitProperties)
     bpy.utils.register_class(COMMIT_UL_List)
     bpy.utils.register_class(CreateRepo)
     bpy.utils.register_class(AddFileToRepo)
@@ -92,7 +92,8 @@ def unregister():
     del bpy.types.Scene.display_branch
     del bpy.types.Scene.ifcgit_filter
     bpy.utils.unregister_class(IFCGIT_PT_panel)
-    bpy.utils.unregister_class(ListItem)
+    bpy.utils.unregister_class(IfcGitListItem)
+    bpy.utils.unregister_class(IfcGitProperties)
     bpy.utils.unregister_class(COMMIT_UL_List)
     bpy.utils.unregister_class(CreateRepo)
     bpy.utils.unregister_class(AddFileToRepo)

@@ -9,8 +9,11 @@ from bpy.props import (
     EnumProperty,
 )
 
+from tool import update_revlist, git_branches
 
-class IfcGitListItem(bpy.types.PropertyGroup):
+    
+
+class IfcGitListItem(PropertyGroup):
     """Group of properties representing an item in the list."""
 
     hexsha: bpy.props.StringProperty(
@@ -27,7 +30,7 @@ class IfcGitListItem(bpy.types.PropertyGroup):
 class IfcGitProperties(PropertyGroup):
 
     
-    ifcgit_commits: CollectionProperty(type=ListItem)
+    ifcgit_commits: CollectionProperty(type=IfcGitListItem, name="List of git items")
     commit_index: IntProperty(
         name="Index for my_list", default=0
     )
