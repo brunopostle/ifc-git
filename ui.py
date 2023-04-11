@@ -23,6 +23,10 @@ class IFCGIT_PT_panel(bpy.types.Panel):
     bl_parent_id = "BIM_PT_project_info"
 
     def draw(self, context):
+
+        if not IfcGitData.is_loaded:
+            IfcGitData.load()
+
         layout = self.layout
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
 
