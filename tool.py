@@ -104,7 +104,8 @@ def update_revlist(self, context):
     """wrapper to trigger update of the revision list"""
 
     bpy.ops.ifcgit.refresh()
-    context.scene.commit_index = 0
+    props = context.scene.IfcGitProperties
+    props.commit_index = 0
 
 
 def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
