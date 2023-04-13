@@ -3,10 +3,19 @@ import re
 import git
 import bpy
 from blenderbim.bim.ifc import IfcStore
-import blenderbim.tool
+import blenderbim.tool as tool
 
 from data import IfcGitData
 
+class IfcGit():
+    @classmethod
+    def init_repo(cls, path_dir):
+        git.Repo.init(path_dir)
+
+    @classmethod
+    def get_path_dir(cls, path_ifc):
+        return os.path.abspath(os.path.dirname(path_ifc))
+        
 
 def is_valid_ref_format(string):
     """Check a bare branch or tag name is valid"""
@@ -139,7 +148,7 @@ def ifc_diff_ids(repo, hash_a, hash_b, path_ifc):
 
 
 def get_modified_shape_object_step_ids(step_ids):
-    model = blenderbim.tool.Ifc.get()
+    model = tool.Ifc.get()
     modified_shape_object_step_ids = {"modified": []}
 
     for step_id in step_ids["modified"]:

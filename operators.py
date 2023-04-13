@@ -11,6 +11,7 @@ from tool import (
 
 from data import IfcGitData
 
+import blenderbim.tool as btool
 
 class CreateRepo(bpy.types.Operator):
     """Initialise a Git repository"""
@@ -34,7 +35,7 @@ class CreateRepo(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.create_repo(tool)
+        core.create_repo(tool.IfcGit, btool.Ifc)
         return {"FINISHED"}
 
 

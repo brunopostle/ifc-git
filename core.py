@@ -4,11 +4,10 @@ import git
 from data import IfcGitData
 
 
-def create_repo(tool):
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-    path_dir = os.path.abspath(os.path.dirname(path_ifc))
-    git.Repo.init(path_dir)
-
+def create_repo(ifcgit, ifc):
+    path_ifc = ifc.get_path()
+    path_dir = ifcgit.get_path_dir(path_ifc)
+    ifcgit.init_repo(path_dir)
 
 def add_file(tool):
     path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
