@@ -8,7 +8,30 @@ from bpy.props import (
     EnumProperty,
 )
 
-from tool import update_revlist, git_branches
+from data import IfcGitData
+
+def git_branches(self, context):
+    """branches enum"""
+
+    # NOTE "Python must keep a reference to the strings returned by
+    # the callback or Blender will misbehave or even crash"
+    IfcGitData.data["branch_names"] = sorted(
+        [branch.name for branch in IfcGitData.data["repo"].heads]
+    )
+
+    if "main" in IfcGitData.data["branch_names"]:
+        IfcGitData.data["branch_names"].remove("main")
+        IfcGitData.data["branch_names"] = ["main"] + IfcGitData.data["branch_names"]
+
+    return [(myname, myname, myname) for myname in IfcGitData.data["branch_names"]]
+
+
+def update_revlist(self, context):
+    """wrapper to trigger update of the revision list"""
+
+    bpy.ops.ifcgit.refresh()
+    props = context.scene.IfcGitProperties
+    props.commit_index = 0
 
 
 class IfcGitListItem(PropertyGroup):

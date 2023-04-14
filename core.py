@@ -9,24 +9,23 @@ def create_repo(ifcgit, ifc):
     path_dir = ifcgit.get_path_dir(path_ifc)
     ifcgit.init_repo(path_dir)
 
-def add_file(tool):
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-    repo = tool.repo_from_path(path_ifc)
-    repo.index.add(path_ifc)
-    repo.index.commit(message="Added " + os.path.relpath(path_ifc, repo.working_dir))
+def add_file(ifcgit, ifc):
+    path_ifc = ifc.get_path()
+    repo = ifcgit.repo_from_path(path_ifc)
+    ifcgit.add_file_to_repo(repo, path_ifc)
 
     bpy.ops.ifcgit.refresh()
 
 
-def discard_uncomitted(tool):
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+def discard_uncomitted(ifcgit, ifc):
+    path_ifc = ifc.get_path()
     # NOTE this is calling the git binary in a subprocess
     IfcGitData.data["repo"].git.checkout(path_ifc)
-    tool.load_project(path_ifc)
+    ifcgit.load_project(path_ifc)
 
 
-def commit_changes(tool, context):
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+def commit_changes(ifcgit, ifc, context):
+    path_ifc = ifc.get_path()
     props = context.scene.IfcGitProperties
     IfcGitData.data["repo"].index.add(path_ifc)
     IfcGitData.data["repo"].index.commit(message=props.commit_message)

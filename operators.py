@@ -3,12 +3,7 @@ import re
 import bpy
 
 import core
-import tool
-from tool import (
-    is_valid_ref_format,
-    repo_from_path,
-)
-
+from tool import IfcGit as tool
 from data import IfcGitData
 
 import blenderbim.tool as btool
@@ -25,7 +20,7 @@ class CreateRepo(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         if not os.path.isfile(path_ifc):
             return False
-        if repo_from_path(path_ifc):
+        if tool.repo_from_path(path_ifc):
             # repo already exists
             return False
         if re.match("^/home/[^/]+/?$", os.path.dirname(path_ifc)):
@@ -35,7 +30,7 @@ class CreateRepo(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.create_repo(tool.IfcGit, btool.Ifc)
+        core.create_repo(tool, btool.Ifc)
         return {"FINISHED"}
 
 
@@ -51,14 +46,14 @@ class AddFileToRepo(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         if not os.path.isfile(path_ifc):
             return False
-        if not repo_from_path(path_ifc):
+        if not tool.repo_from_path(path_ifc):
             # repo doesn't exist
             return False
         return True
 
     def execute(self, context):
 
-        core.add_file(tool)
+        core.add_file(tool, btool.Ifc)
         return {"FINISHED"}
 
 
@@ -71,7 +66,7 @@ class DiscardUncommitted(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.discard_uncomitted(tool)
+        core.discard_uncomitted(tool, btool.Ifc)
         return {"FINISHED"}
 
 
@@ -91,7 +86,7 @@ class CommitChanges(bpy.types.Operator):
             IfcGitData.data["repo"]
             and IfcGitData.data["repo"].head.is_detached
             and (
-                not is_valid_ref_format(props.new_branch_name)
+                not tool.is_valid_ref_format(props.new_branch_name)
                 or props.new_branch_name
                 in [branch.name for branch in IfcGitData.data["repo"].branches]
             )
@@ -101,7 +96,7 @@ class CommitChanges(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.commit_changes(tool, context)
+        core.commit_changes(tool, btool.Ifc, context)
         return {"FINISHED"}
 
 
