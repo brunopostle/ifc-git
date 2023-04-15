@@ -51,8 +51,6 @@ def colourise_revision(ifcgit, context):
 
 def colourise_uncommitted(ifcgit, ifc, repo):
     path_ifc = ifc.get_path()
-    print("!!!", IfcGitData.data["repo"])
-    print(repo)
     step_ids = ifcgit.ifc_diff_ids(repo, None, "HEAD", path_ifc)
     ifcgit.colourise(step_ids)
 
@@ -65,44 +63,51 @@ def switch_revision(ifcgit, ifc):
     ifcgit.load_project(path_ifc)
 
 
-def merge_branch(tool, context, operator):
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-    props = context.scene.IfcGitProperties
-    item = props.ifcgit_commits[props.commit_index]
+def merge_branch(ifcgit, ifc, operator):
+    path_ifc = ifc.get_path()
+    ###
 
-    config_reader = IfcGitData.data["repo"].config_reader()
-    section = 'mergetool "ifcmerge"'
-    if not config_reader.has_section(section):
-        config_writer = IfcGitData.data["repo"].config_writer()
-        config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
-        config_writer.set_value(section, "trustExitCode", True)
+    ifcgit.config_ifcmerge()
 
-    lookup = tool.branches_by_hexsha(IfcGitData.data["repo"])
-    if item.hexsha in lookup:
-        for branch in lookup[item.hexsha]:
-            if branch.name == props.display_branch:
-                # this is a branch!
-                try:
-                    # NOTE this is calling the git binary in a subprocess
-                    IfcGitData.data["repo"].git.merge(branch)
-                except git.exc.GitCommandError:
-                    # merge is expected to fail, run ifcmerge
-                    try:
-                        IfcGitData.data["repo"].git.mergetool(tool="ifcmerge")
-                    except:
-                        # ifcmerge failed, rollback
-                        IfcGitData.data["repo"].git.merge(abort=True)
-                        # FIXME need to report errors somehow
+    # config_reader = IfcGitData.data["repo"].config_reader()
+    # section = 'mergetool "ifcmerge"'
+    # if not config_reader.has_section(section):
+    #     config_writer = IfcGitData.data["repo"].config_writer()
+    #     config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
+    #     config_writer.set_value(section, "trustExitCode", True)
 
-                        operator.report({"ERROR"}, "IFC Merge failed")
-                        return False
-                except:
+    ifcgit.execute_merge(path_ifc)
+    
+    # props = context.scene.IfcGitProperties
+    # item = props.ifcgit_commits[props.commit_index]
+    # lookup = tool.branches_by_hexsha(IfcGitData.data["repo"])
+    # if item.hexsha in lookup:
+    #     for branch in lookup[item.hexsha]:
+    #         if branch.name == props.display_branch:
+    #             # this is a branch!
+    #             try:
+    #                 # NOTE this is calling the git binary in a subprocess
+    #                 IfcGitData.data["repo"].git.merge(branch)
+    #             except git.exc.GitCommandError:
+    #                 # merge is expected to fail, run ifcmerge
+    #                 try:
+    #                     IfcGitData.data["repo"].git.mergetool(tool="ifcmerge")
+    #                 except:
+    #                     # ifcmerge failed, rollback
+    #                     IfcGitData.data["repo"].git.merge(abort=True)
+    #                     # FIXME need to report errors somehow
 
-                    operator.report({"ERROR"}, "Unknown IFC Merge failure")
-                    return False
+    #                     operator.report({"ERROR"}, "IFC Merge failed")
+    #                     return False
+    #             except:
 
-        IfcGitData.data["repo"].index.add(path_ifc)
-        props.commit_message = "Merged branch: " + props.display_branch
-        props.display_branch = IfcGitData.data["repo"].active_branch.name
+    #                 operator.report({"ERROR"}, "Unknown IFC Merge failure")
+    #                 return False
 
-        tool.load_project(path_ifc)
+    #     IfcGitData.data["repo"].index.add(path_ifc)
+    #     props.commit_message = "Merged branch: " + props.display_branch
+    #     props.display_branch = IfcGitData.data["repo"].active_branch.name
+
+    #     tool.load_project(path_ifc)
+    
+    # ifcgit.load_project(path_ifc)

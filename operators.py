@@ -172,7 +172,7 @@ class Merge(bpy.types.Operator):
 
     def execute(self, context):
 
-        if core.merge_branch(tool, context, self):
+        if core.merge_branch(tool, btool.Ifc, self):
             return {"FINISHED"}
         else:
             return {"CANCELLED"}

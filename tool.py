@@ -309,3 +309,48 @@ class IfcGit():
         if new_branch_name in [branch.name for branch in IfcGitData.data["repo"].branches]:
             return False
         return True
+
+    @classmethod
+    def config_ifcmerge(cls):
+        config_reader = IfcGitData.data["repo"].config_reader()
+        section = 'mergetool "ifcmerge"'
+        if not config_reader.has_section(section):
+            config_writer = IfcGitData.data["repo"].config_writer()
+            config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
+            config_writer.set_value(section, "trustExitCode", True)
+
+    @classmethod
+    def execute_merge(cls, path_ifc):
+        props = bpy.context.scene.IfcGitProperties
+        repo = IfcGitData.data["repo"]
+        item = props.ifcgit_commits[props.commit_index]
+        lookup = IfcGit.branches_by_hexsha(repo)
+        if item.hexsha in lookup:
+            for branch in lookup[item.hexsha]:
+                if branch.name == props.display_branch:
+                    # this is a branch!
+                    try:
+                        # NOTE this is calling the git binary in a subprocess
+                        repo.git.merge(branch)
+                    except git.exc.GitCommandError:
+                        # merge is expected to fail, run ifcmerge
+                        try:
+                            repo.git.mergetool(tool="ifcmerge")
+                        except:
+                            # ifcmerge failed, rollback
+                            repo.git.merge(abort=True)
+                            # FIXME need to report errors somehow
+
+                            operator.report({"ERROR"}, "IFC Merge failed")
+                            return False
+                    except:
+
+                        operator.report({"ERROR"}, "Unknown IFC Merge failure")
+                        return False
+
+            repo.index.add(path_ifc)
+            props.commit_message = "Merged branch: " + props.display_branch
+            props.display_branch = repo.active_branch.name
+
+            IfcGit.load_project(path_ifc)
+        
