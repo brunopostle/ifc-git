@@ -111,13 +111,15 @@ class RefreshGit(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if IfcGitData.data["repo"] != None and IfcGitData.data["repo"].heads:
+        repo = IfcGitData.data["repo"]
+        if repo != None and repo.heads:
             return True
         return False
 
     def execute(self, context):
 
-        core.refresh_revision_list(tool, btool.Ifc)
+        repo = IfcGitData.data["repo"]
+        core.refresh_revision_list(tool, repo, btool.Ifc)
         return {"FINISHED"}
 
 

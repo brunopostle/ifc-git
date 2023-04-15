@@ -32,10 +32,10 @@ def commit_changes(ifcgit, ifc, repo, context):
 
 
 
-def refresh_revision_list(ifcgit, ifc):
+def refresh_revision_list(ifcgit, repo, ifc):
     ifcgit.clear_commits_list()
     path_ifc = ifc.get_path()
-    lookup = ifcgit.tags_by_hexsha(IfcGitData.data["repo"])
+    lookup = ifcgit.tags_by_hexsha(repo)
     ifcgit.get_commits_list(path_ifc, lookup)
 
 
