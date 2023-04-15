@@ -201,6 +201,38 @@ class IfcGit():
             "removed": deleted.difference(modified),
         }
 
+    @classmethod
+    def get_revisions_step_ids(cls):
+        
+        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        props = bpy.context.scene.IfcGitProperties
+        repo = IfcGitData.data["repo"]
+        item = props.ifcgit_commits[props.commit_index]
+
+        selected_revision = repo.commit(rev=item.hexsha)
+        current_revision = repo.commit()
+
+        if selected_revision == current_revision:
+            area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
+            area.spaces[0].shading.color_type = "MATERIAL"
+            return
+
+        if current_revision.committed_date > selected_revision.committed_date:
+            step_ids = IfcGit.ifc_diff_ids(
+                repo,
+                selected_revision.hexsha,
+                current_revision.hexsha,
+                path_ifc,
+            )
+        else:
+            step_ids = IfcGit.ifc_diff_ids(
+                repo,
+                current_revision.hexsha,
+                selected_revision.hexsha,
+                path_ifc,
+            )
+        return step_ids
+
 
     @classmethod
     def get_modified_shape_object_step_ids(cls, step_ids):
@@ -214,7 +246,17 @@ class IfcGit():
 
         return modified_shape_object_step_ids
 
-
+    @classmethod
+    def update_step_ids(cls, step_ids, modified_shape_object_step_ids):
+        
+        final_step_ids = {}
+        final_step_ids["added"] = step_ids["added"]
+        final_step_ids["removed"] = step_ids["removed"]
+        final_step_ids["modified"] = step_ids["modified"].union(
+            modified_shape_object_step_ids["modified"]
+        )
+        return final_step_ids
+        
     @classmethod
     def colourise(cls, step_ids):
         area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")

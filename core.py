@@ -39,44 +39,11 @@ def refresh_revision_list(ifcgit, repo, ifc):
     ifcgit.get_commits_list(path_ifc, lookup)
 
 
-def colourise_revision(tool, context):
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-    props = context.scene.IfcGitProperties
-    item = props.ifcgit_commits[props.commit_index]
+def colourise_revision(ifcgit, context):
 
-    selected_revision = IfcGitData.data["repo"].commit(rev=item.hexsha)
-    current_revision = IfcGitData.data["repo"].commit()
-
-    if selected_revision == current_revision:
-        area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
-        area.spaces[0].shading.color_type = "MATERIAL"
-        return
-
-    if current_revision.committed_date > selected_revision.committed_date:
-        step_ids = tool.ifc_diff_ids(
-            IfcGitData.data["repo"],
-            selected_revision.hexsha,
-            current_revision.hexsha,
-            path_ifc,
-        )
-    else:
-        step_ids = tool.ifc_diff_ids(
-            IfcGitData.data["repo"],
-            current_revision.hexsha,
-            selected_revision.hexsha,
-            path_ifc,
-        )
-
-    modified_shape_object_step_ids = tool.get_modified_shape_object_step_ids(step_ids)
-
-    final_step_ids = {}
-    final_step_ids["added"] = step_ids["added"]
-    final_step_ids["removed"] = step_ids["removed"]
-    final_step_ids["modified"] = step_ids["modified"].union(
-        modified_shape_object_step_ids["modified"]
-    )
-
-    tool.colourise(final_step_ids)
+    step_ids = ifcgit.get_revisions_step_ids()
+    modified_shape_object_step_ids = ifcgit.get_modified_shape_object_step_ids(step_ids)
+    final_step_ids = ifcgit.update_step_ids(step_ids, modified_shape_object_step_ids)
 
 
 def colourise_uncommitted(tool):
