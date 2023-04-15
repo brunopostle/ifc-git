@@ -44,6 +44,7 @@ def colourise_revision(ifcgit, context):
     step_ids = ifcgit.get_revisions_step_ids()
     modified_shape_object_step_ids = ifcgit.get_modified_shape_object_step_ids(step_ids)
     final_step_ids = ifcgit.update_step_ids(step_ids, modified_shape_object_step_ids)
+    ifcgit.colourise(final_step_ids)
 
 
 def colourise_uncommitted(tool):
