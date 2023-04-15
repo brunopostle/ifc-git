@@ -49,10 +49,12 @@ def colourise_revision(ifcgit, context):
     ifcgit.colourise(final_step_ids)
 
 
-def colourise_uncommitted(tool):
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-    step_ids = tool.ifc_diff_ids(IfcGitData.data["repo"], None, "HEAD", path_ifc)
-    tool.colourise(step_ids)
+def colourise_uncommitted(ifcgit, ifc, repo):
+    path_ifc = ifc.get_path()
+    print("!!!", IfcGitData.data["repo"])
+    print(repo)
+    step_ids = ifcgit.ifc_diff_ids(repo, None, "HEAD", path_ifc)
+    ifcgit.colourise(step_ids)
 
 
 def switch_revision(tool, context):

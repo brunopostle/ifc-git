@@ -145,7 +145,8 @@ class DisplayUncommitted(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.colourise_uncommitted(tool)
+        repo = IfcGitData.data["repo"]
+        core.colourise_uncommitted(tool, btool.Ifc, repo)
         return {"FINISHED"}
 
 
