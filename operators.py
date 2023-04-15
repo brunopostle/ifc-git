@@ -159,7 +159,7 @@ class SwitchRevision(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.switch_revision(tool, context)
+        core.switch_revision(tool, btool.Ifc)
         return {"FINISHED"}
 
 

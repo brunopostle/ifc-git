@@ -57,23 +57,12 @@ def colourise_uncommitted(ifcgit, ifc, repo):
     ifcgit.colourise(step_ids)
 
 
-def switch_revision(tool, context):
+def switch_revision(ifcgit, ifc):
     # FIXME bad things happen when switching to a revision that predates current project
 
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-    props = context.scene.IfcGitProperties
-    item = props.ifcgit_commits[props.commit_index]
-
-    lookup = tool.branches_by_hexsha(IfcGitData.data["repo"])
-    if item.hexsha in lookup:
-        for branch in lookup[item.hexsha]:
-            if branch.name == props.display_branch:
-                branch.checkout()
-    else:
-        # NOTE this is calling the git binary in a subprocess
-        IfcGitData.data["repo"].git.checkout(item.hexsha)
-
-    tool.load_project(path_ifc)
+    path_ifc = ifc.get_path()
+    ifcgit.switch_to_revision_item()
+    ifcgit.load_project(path_ifc)
 
 
 def merge_branch(tool, context, operator):

@@ -275,6 +275,21 @@ class IfcGit():
             else:
                 obj.color = (1.0, 1.0, 1.0, 0.5)
 
+    @classmethod
+    def switch_to_revision_item(cls):
+        props = bpy.context.scene.IfcGitProperties
+        repo = IfcGitData.data["repo"]
+        item = props.ifcgit_commits[props.commit_index]
+        
+        lookup = IfcGit.branches_by_hexsha(repo)
+        if item.hexsha in lookup:
+            for branch in lookup[item.hexsha]:
+                if branch.name == props.display_branch:
+                    branch.checkout()
+        else:
+            # NOTE this is calling the git binary in a subprocess
+            repo.git.checkout(item.hexsha)
+
 
     @classmethod
     def delete_collection(cls, blender_collection):
