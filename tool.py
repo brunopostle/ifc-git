@@ -49,7 +49,32 @@ class IfcGit():
     def add_file_to_repo(cls, repo, path_ifc):
         repo.index.add(path_ifc)
         repo.index.commit(message="Added " + os.path.relpath(path_ifc, repo.working_dir))
+        bpy.ops.ifcgit.refresh()
         
+
+    @classmethod
+    def git_checkout(cls, path_ifc):
+        IfcGitData.data["repo"].git.checkout(path_ifc)
+
+    @classmethod
+    def git_commit(cls, path_ifc):
+        props = bpy.context.scene.IfcGitProperties
+        repo = IfcGitData.data["repo"]
+        repo.index.add(path_ifc)
+        repo.index.commit(message=props.commit_message)
+        props.commit_message = ""
+        return repo
+
+    @classmethod
+    def create_new_branch(cls):
+        props = bpy.context.scene.IfcGitProperties
+        repo = IfcGitData.data["repo"]
+        new_branch = repo.create_head(props.new_branch_name)
+        new_branch.checkout()
+        props.display_branch = props.new_branch_name
+        props.new_branch_name = ""
+        
+        bpy.ops.ifcgit.refresh()
 
     @classmethod
     def is_valid_ref_format(cls, string):

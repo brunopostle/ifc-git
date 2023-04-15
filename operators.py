@@ -80,15 +80,16 @@ class CommitChanges(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         props = context.scene.IfcGitProperties
+        repo = IfcGitData.data["repo"]
         if props.commit_message == "":
             return False
         if (
-            IfcGitData.data["repo"]
-            and IfcGitData.data["repo"].head.is_detached
+            repo
+            and repo.head.is_detached
             and (
                 not tool.is_valid_ref_format(props.new_branch_name)
                 or props.new_branch_name
-                in [branch.name for branch in IfcGitData.data["repo"].branches]
+                in [branch.name for branch in repo.branches]
             )
         ):
             return False
@@ -96,7 +97,8 @@ class CommitChanges(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.commit_changes(tool, btool.Ifc, context)
+        repo = IfcGitData.data["repo"]
+        core.commit_changes(tool, btool.Ifc, repo, context)
         return {"FINISHED"}
 
 

@@ -9,35 +9,27 @@ def create_repo(ifcgit, ifc):
     path_dir = ifcgit.get_path_dir(path_ifc)
     ifcgit.init_repo(path_dir)
 
+
 def add_file(ifcgit, ifc):
     path_ifc = ifc.get_path()
     repo = ifcgit.repo_from_path(path_ifc)
     ifcgit.add_file_to_repo(repo, path_ifc)
 
-    bpy.ops.ifcgit.refresh()
-
 
 def discard_uncomitted(ifcgit, ifc):
     path_ifc = ifc.get_path()
     # NOTE this is calling the git binary in a subprocess
-    IfcGitData.data["repo"].git.checkout(path_ifc)
+    ifcgit.git_checkout(path_ifc)
     ifcgit.load_project(path_ifc)
 
 
-def commit_changes(ifcgit, ifc, context):
+def commit_changes(ifcgit, ifc, repo, context):
     path_ifc = ifc.get_path()
-    props = context.scene.IfcGitProperties
-    IfcGitData.data["repo"].index.add(path_ifc)
-    IfcGitData.data["repo"].index.commit(message=props.commit_message)
-    props.commit_message = ""
+    ifcgit.git_commit(path_ifc)
 
-    if IfcGitData.data["repo"].head.is_detached:
-        new_branch = IfcGitData.data["repo"].create_head(props.new_branch_name)
-        new_branch.checkout()
-        props.display_branch = props.new_branch_name
-        props.new_branch_name = ""
+    if repo.head.is_detached:
+        ifcgit.create_new_branch()
 
-    bpy.ops.ifcgit.refresh()
 
 
 def refresh_revision_list(tool, context):

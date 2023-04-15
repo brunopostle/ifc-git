@@ -60,7 +60,6 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             return
 
         is_dirty = IfcGitData.data["repo"].is_dirty(path=path_ifc)
-        print("^^^", is_dirty)
 
         if is_dirty:
             row = layout.row()
