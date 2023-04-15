@@ -117,7 +117,7 @@ class RefreshGit(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.refresh_revision_list(tool, context)
+        core.refresh_revision_list(tool, btool.Ifc)
         return {"FINISHED"}
 
 

@@ -32,44 +32,11 @@ def commit_changes(ifcgit, ifc, repo, context):
 
 
 
-def refresh_revision_list(tool, context):
-    area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
-    area.spaces[0].shading.color_type = "MATERIAL"
-    props = context.scene.IfcGitProperties
-
-    # ifcgit_commits is registered list widget
-    props.ifcgit_commits.clear()
-
-    path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
-
-    commits = list(
-        git.objects.commit.Commit.iter_items(
-            repo=IfcGitData.data["repo"],
-            rev=[props.display_branch],
-        )
-    )
-    commits_relevant = list(
-        git.objects.commit.Commit.iter_items(
-            repo=IfcGitData.data["repo"],
-            rev=[props.display_branch],
-            paths=[path_ifc],
-        )
-    )
-    lookup = tool.tags_by_hexsha(IfcGitData.data["repo"])
-
-    for commit in commits:
-
-        if props.ifcgit_filter == "tagged" and not commit.hexsha in lookup:
-            continue
-        elif (
-            props.ifcgit_filter == "relevant" and not commit in commits_relevant
-        ):
-            continue
-
-        props.ifcgit_commits.add()
-        props.ifcgit_commits[-1].hexsha = commit.hexsha
-        if commit in commits_relevant:
-            props.ifcgit_commits[-1].relevant = True
+def refresh_revision_list(ifcgit, ifc):
+    ifcgit.clear_commits_list()
+    path_ifc = ifc.get_path()
+    lookup = ifcgit.tags_by_hexsha(IfcGitData.data["repo"])
+    ifcgit.get_commits_list(path_ifc, lookup)
 
 
 def colourise_revision(tool, context):

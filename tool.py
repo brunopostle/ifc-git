@@ -77,6 +77,48 @@ class IfcGit():
         bpy.ops.ifcgit.refresh()
 
     @classmethod
+    def clear_commits_list(cls):
+        area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
+        area.spaces[0].shading.color_type = "MATERIAL"
+        props = bpy.context.scene.IfcGitProperties
+
+        # ifcgit_commits is registered list widget
+        props.ifcgit_commits.clear()
+
+    @classmethod
+    def get_commits_list(cls, path_ifc, lookup):
+        
+        props = bpy.context.scene.IfcGitProperties
+        commits = list(
+            git.objects.commit.Commit.iter_items(
+                repo=IfcGitData.data["repo"],
+                rev=[props.display_branch],
+            )
+        )
+        commits_relevant = list(
+            git.objects.commit.Commit.iter_items(
+                repo=IfcGitData.data["repo"],
+                rev=[props.display_branch],
+                paths=[path_ifc],
+            )
+        )
+
+        for commit in commits:
+
+            if props.ifcgit_filter == "tagged" and not commit.hexsha in lookup:
+                continue
+            elif (
+                props.ifcgit_filter == "relevant" and not commit in commits_relevant
+            ):
+                continue
+
+            props.ifcgit_commits.add()
+            props.ifcgit_commits[-1].hexsha = commit.hexsha
+            if commit in commits_relevant:
+                props.ifcgit_commits[-1].relevant = True
+
+
+    @classmethod
     def is_valid_ref_format(cls, string):
         """Check a bare branch or tag name is valid"""
 
