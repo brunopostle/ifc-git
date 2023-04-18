@@ -11,6 +11,7 @@ from bpy.props import (
 
 from data import IfcGitData
 
+
 def git_branches(self, context):
     """branches enum"""
 

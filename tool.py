@@ -7,7 +7,8 @@ import blenderbim.tool as tool
 
 from data import IfcGitData
 
-class IfcGit():
+
+class IfcGit:
     @classmethod
     def init_repo(cls, path_dir):
         git.Repo.init(path_dir)
@@ -48,9 +49,10 @@ class IfcGit():
     @classmethod
     def add_file_to_repo(cls, repo, path_ifc):
         repo.index.add(path_ifc)
-        repo.index.commit(message="Added " + os.path.relpath(path_ifc, repo.working_dir))
+        repo.index.commit(
+            message="Added " + os.path.relpath(path_ifc, repo.working_dir)
+        )
         bpy.ops.ifcgit.refresh()
-        
 
     @classmethod
     def git_checkout(cls, path_ifc):
@@ -73,7 +75,7 @@ class IfcGit():
         new_branch.checkout()
         props.display_branch = props.new_branch_name
         props.new_branch_name = ""
-        
+
         bpy.ops.ifcgit.refresh()
 
     @classmethod
@@ -87,7 +89,7 @@ class IfcGit():
 
     @classmethod
     def get_commits_list(cls, path_ifc, lookup):
-        
+
         props = bpy.context.scene.IfcGitProperties
         commits = list(
             git.objects.commit.Commit.iter_items(
@@ -107,16 +109,13 @@ class IfcGit():
 
             if props.ifcgit_filter == "tagged" and not commit.hexsha in lookup:
                 continue
-            elif (
-                props.ifcgit_filter == "relevant" and not commit in commits_relevant
-            ):
+            elif props.ifcgit_filter == "relevant" and not commit in commits_relevant:
                 continue
 
             props.ifcgit_commits.add()
             props.ifcgit_commits[-1].hexsha = commit.hexsha
             if commit in commits_relevant:
                 props.ifcgit_commits[-1].relevant = True
-
 
     @classmethod
     def is_valid_ref_format(cls, string):
@@ -126,7 +125,6 @@ class IfcGit():
             "^(?!\.| |-|/)((?!\.\.)(?!.*/\.)(/\*|/\*/)*(?!@\{)[^\~\:\^\\\ \?*\[])+(?<!\.|/)(?<!\.lock)$",
             string,
         )
-
 
     @classmethod
     def load_project(cls, path_ifc):
@@ -142,9 +140,6 @@ class IfcGit():
         bpy.ops.bim.load_project(filepath=path_ifc)
         bpy.ops.ifcgit.refresh()
 
-
-
-
     @classmethod
     def branches_by_hexsha(cls, repo):
         """reverse lookup for branches"""
@@ -157,7 +152,6 @@ class IfcGit():
                 result[branch.commit.hexsha] = [branch]
         return result
 
-
     @classmethod
     def tags_by_hexsha(cls, repo):
         """reverse lookup for tags"""
@@ -169,7 +163,6 @@ class IfcGit():
             else:
                 result[tag.commit.hexsha] = [tag]
         return result
-
 
     @classmethod
     def ifc_diff_ids(cls, repo, hash_a, hash_b, path_ifc):
@@ -203,7 +196,7 @@ class IfcGit():
 
     @classmethod
     def get_revisions_step_ids(cls):
-        
+
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         props = bpy.context.scene.IfcGitProperties
         repo = IfcGitData.data["repo"]
@@ -213,7 +206,9 @@ class IfcGit():
         current_revision = repo.commit()
 
         if selected_revision == current_revision:
-            area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
+            area = next(
+                area for area in bpy.context.screen.areas if area.type == "VIEW_3D"
+            )
             area.spaces[0].shading.color_type = "MATERIAL"
             return
 
@@ -233,7 +228,6 @@ class IfcGit():
             )
         return step_ids
 
-
     @classmethod
     def get_modified_shape_object_step_ids(cls, step_ids):
         model = tool.Ifc.get()
@@ -248,7 +242,7 @@ class IfcGit():
 
     @classmethod
     def update_step_ids(cls, step_ids, modified_shape_object_step_ids):
-        
+
         final_step_ids = {}
         final_step_ids["added"] = step_ids["added"]
         final_step_ids["removed"] = step_ids["removed"]
@@ -256,7 +250,7 @@ class IfcGit():
             modified_shape_object_step_ids["modified"]
         )
         return final_step_ids
-        
+
     @classmethod
     def colourise(cls, step_ids):
         area = next(area for area in bpy.context.screen.areas if area.type == "VIEW_3D")
@@ -280,7 +274,7 @@ class IfcGit():
         props = bpy.context.scene.IfcGitProperties
         repo = IfcGitData.data["repo"]
         item = props.ifcgit_commits[props.commit_index]
-        
+
         lookup = IfcGit.branches_by_hexsha(repo)
         if item.hexsha in lookup:
             for branch in lookup[item.hexsha]:
@@ -289,7 +283,6 @@ class IfcGit():
         else:
             # NOTE this is calling the git binary in a subprocess
             repo.git.checkout(item.hexsha)
-
 
     @classmethod
     def delete_collection(cls, blender_collection):
@@ -300,13 +293,14 @@ class IfcGit():
             if not collection.users:
                 bpy.data.collections.remove(collection)
 
-
     @classmethod
     def is_valid_branch_name(cls, new_branch_name):
         """Check if a branch name is valid and doesn't conflict with existing branches"""
         if not IfcGit.is_valid_ref_format(new_branch_name):
             return False
-        if new_branch_name in [branch.name for branch in IfcGitData.data["repo"].branches]:
+        if new_branch_name in [
+            branch.name for branch in IfcGitData.data["repo"].branches
+        ]:
             return False
         return True
 
@@ -316,7 +310,9 @@ class IfcGit():
         section = 'mergetool "ifcmerge"'
         if not config_reader.has_section(section):
             config_writer = IfcGitData.data["repo"].config_writer()
-            config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
+            config_writer.set_value(
+                section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED"
+            )
             config_writer.set_value(section, "trustExitCode", True)
 
     @classmethod
@@ -353,4 +349,3 @@ class IfcGit():
             props.display_branch = repo.active_branch.name
 
             IfcGit.load_project(path_ifc)
-        

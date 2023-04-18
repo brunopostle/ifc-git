@@ -1,9 +1,3 @@
-import os
-import bpy
-import git
-from data import IfcGitData
-
-
 def create_repo(ifcgit, ifc):
     path_ifc = ifc.get_path()
     path_dir = ifcgit.get_path_dir(path_ifc)
@@ -29,7 +23,6 @@ def commit_changes(ifcgit, ifc, repo, context):
 
     if repo.head.is_detached:
         ifcgit.create_new_branch()
-
 
 
 def refresh_revision_list(ifcgit, repo, ifc):
@@ -65,49 +58,5 @@ def switch_revision(ifcgit, ifc):
 
 def merge_branch(ifcgit, ifc, operator):
     path_ifc = ifc.get_path()
-    ###
-
     ifcgit.config_ifcmerge()
-
-    # config_reader = IfcGitData.data["repo"].config_reader()
-    # section = 'mergetool "ifcmerge"'
-    # if not config_reader.has_section(section):
-    #     config_writer = IfcGitData.data["repo"].config_writer()
-    #     config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
-    #     config_writer.set_value(section, "trustExitCode", True)
-
     ifcgit.execute_merge(path_ifc, operator)
-    
-    # props = context.scene.IfcGitProperties
-    # item = props.ifcgit_commits[props.commit_index]
-    # lookup = tool.branches_by_hexsha(IfcGitData.data["repo"])
-    # if item.hexsha in lookup:
-    #     for branch in lookup[item.hexsha]:
-    #         if branch.name == props.display_branch:
-    #             # this is a branch!
-    #             try:
-    #                 # NOTE this is calling the git binary in a subprocess
-    #                 IfcGitData.data["repo"].git.merge(branch)
-    #             except git.exc.GitCommandError:
-    #                 # merge is expected to fail, run ifcmerge
-    #                 try:
-    #                     IfcGitData.data["repo"].git.mergetool(tool="ifcmerge")
-    #                 except:
-    #                     # ifcmerge failed, rollback
-    #                     IfcGitData.data["repo"].git.merge(abort=True)
-    #                     # FIXME need to report errors somehow
-
-    #                     operator.report({"ERROR"}, "IFC Merge failed")
-    #                     return False
-    #             except:
-
-    #                 operator.report({"ERROR"}, "Unknown IFC Merge failure")
-    #                 return False
-
-    #     IfcGitData.data["repo"].index.add(path_ifc)
-    #     props.commit_message = "Merged branch: " + props.display_branch
-    #     props.display_branch = IfcGitData.data["repo"].active_branch.name
-
-    #     tool.load_project(path_ifc)
-    
-    # ifcgit.load_project(path_ifc)

@@ -8,6 +8,7 @@ from data import IfcGitData
 
 import blenderbim.tool as btool
 
+
 class CreateRepo(bpy.types.Operator):
     """Initialise a Git repository"""
 
@@ -88,8 +89,7 @@ class CommitChanges(bpy.types.Operator):
             and repo.head.is_detached
             and (
                 not tool.is_valid_ref_format(props.new_branch_name)
-                or props.new_branch_name
-                in [branch.name for branch in repo.branches]
+                or props.new_branch_name in [branch.name for branch in repo.branches]
             )
         ):
             return False

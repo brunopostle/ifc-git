@@ -2,11 +2,9 @@ import os
 import bpy
 import time
 
-from tool import IfcGit 
-
+from tool import IfcGit
 from data import IfcGitData
 
-import blenderbim.tool.ifc as ifc
 
 class IFCGIT_PT_panel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""

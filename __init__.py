@@ -23,8 +23,6 @@ import prop
 from prop import IfcGitListItem, IfcGitProperties
 
 
-# import ui, prop, operator
-
 classes = (
     operators.AddFileToRepo,
     operators.CommitChanges,
@@ -64,7 +62,8 @@ bl_info = {
 #  along with this program; if not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# 2023 Bruno Postle <bruno@postle.net>
+# 2023 Bruno Postle <bruno@postle.net>, Bruno Perdigão <brunoperdigao@tutanota.com>,
+# Massimo Fabbro <maxfb87@yahoo.it>
 
 
 def register():
@@ -81,7 +80,9 @@ def register():
     bpy.utils.register_class(DisplayUncommitted)
     bpy.utils.register_class(SwitchRevision)
     bpy.utils.register_class(Merge)
-    bpy.types.Scene.IfcGitProperties = bpy.props.PointerProperty(type=prop.IfcGitProperties)
+    bpy.types.Scene.IfcGitProperties = bpy.props.PointerProperty(
+        type=prop.IfcGitProperties
+    )
 
 
 def unregister():
@@ -99,6 +100,7 @@ def unregister():
     bpy.utils.unregister_class(SwitchRevision)
     bpy.utils.unregister_class(Merge)
     del bpy.types.Scene.IfcGitProperties
+
 
 if __name__ == "__main__":
     register()
