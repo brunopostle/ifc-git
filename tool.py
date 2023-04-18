@@ -304,7 +304,7 @@ class IfcGit():
     @classmethod
     def is_valid_branch_name(cls, new_branch_name):
         """Check if a branch name is valid and doesn't conflict with existing branches"""
-        if not is_valid_ref_format(new_branch_name):
+        if not IfcGit.is_valid_ref_format(new_branch_name):
             return False
         if new_branch_name in [branch.name for branch in IfcGitData.data["repo"].branches]:
             return False
