@@ -76,7 +76,7 @@ def merge_branch(ifcgit, ifc, operator):
     #     config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
     #     config_writer.set_value(section, "trustExitCode", True)
 
-    ifcgit.execute_merge(path_ifc)
+    ifcgit.execute_merge(path_ifc, operator)
     
     # props = context.scene.IfcGitProperties
     # item = props.ifcgit_commits[props.commit_index]

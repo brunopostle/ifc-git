@@ -320,7 +320,7 @@ class IfcGit():
             config_writer.set_value(section, "trustExitCode", True)
 
     @classmethod
-    def execute_merge(cls, path_ifc):
+    def execute_merge(cls, path_ifc, operator):
         props = bpy.context.scene.IfcGitProperties
         repo = IfcGitData.data["repo"]
         item = props.ifcgit_commits[props.commit_index]
