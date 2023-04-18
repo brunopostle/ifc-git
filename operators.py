@@ -3,14 +3,10 @@ import re
 import bpy
 
 import core
-import tool
-from tool import (
-    is_valid_ref_format,
-    repo_from_path,
-)
-
+from tool import IfcGit as tool
 from data import IfcGitData
 
+import blenderbim.tool as btool
 
 class CreateRepo(bpy.types.Operator):
     """Initialise a Git repository"""
@@ -24,7 +20,7 @@ class CreateRepo(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         if not os.path.isfile(path_ifc):
             return False
-        if repo_from_path(path_ifc):
+        if tool.repo_from_path(path_ifc):
             # repo already exists
             return False
         if re.match("^/home/[^/]+/?$", os.path.dirname(path_ifc)):
@@ -34,7 +30,7 @@ class CreateRepo(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.create_repo(tool)
+        core.create_repo(tool, btool.Ifc)
         return {"FINISHED"}
 
 
@@ -50,14 +46,14 @@ class AddFileToRepo(bpy.types.Operator):
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         if not os.path.isfile(path_ifc):
             return False
-        if not repo_from_path(path_ifc):
+        if not tool.repo_from_path(path_ifc):
             # repo doesn't exist
             return False
         return True
 
     def execute(self, context):
 
-        core.add_file(tool)
+        core.add_file(tool, btool.Ifc)
         return {"FINISHED"}
 
 
@@ -70,7 +66,7 @@ class DiscardUncommitted(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.discard_uncomitted(tool)
+        core.discard_uncomitted(tool, btool.Ifc)
         return {"FINISHED"}
 
 
@@ -84,15 +80,16 @@ class CommitChanges(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         props = context.scene.IfcGitProperties
+        repo = IfcGitData.data["repo"]
         if props.commit_message == "":
             return False
         if (
-            IfcGitData.data["repo"]
-            and IfcGitData.data["repo"].head.is_detached
+            repo
+            and repo.head.is_detached
             and (
-                not is_valid_ref_format(props.new_branch_name)
+                not tool.is_valid_ref_format(props.new_branch_name)
                 or props.new_branch_name
-                in [branch.name for branch in IfcGitData.data["repo"].branches]
+                in [branch.name for branch in repo.branches]
             )
         ):
             return False
@@ -100,7 +97,8 @@ class CommitChanges(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.commit_changes(tool, context)
+        repo = IfcGitData.data["repo"]
+        core.commit_changes(tool, btool.Ifc, repo, context)
         return {"FINISHED"}
 
 
@@ -113,13 +111,15 @@ class RefreshGit(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if IfcGitData.data["repo"] != None and IfcGitData.data["repo"].heads:
+        repo = IfcGitData.data["repo"]
+        if repo != None and repo.heads:
             return True
         return False
 
     def execute(self, context):
 
-        core.refresh_revision_list(tool, context)
+        repo = IfcGitData.data["repo"]
+        core.refresh_revision_list(tool, repo, btool.Ifc)
         return {"FINISHED"}
 
 
@@ -145,7 +145,8 @@ class DisplayUncommitted(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.colourise_uncommitted(tool)
+        repo = IfcGitData.data["repo"]
+        core.colourise_uncommitted(tool, btool.Ifc, repo)
         return {"FINISHED"}
 
 
@@ -158,7 +159,7 @@ class SwitchRevision(bpy.types.Operator):
 
     def execute(self, context):
 
-        core.switch_revision(tool, context)
+        core.switch_revision(tool, btool.Ifc)
         return {"FINISHED"}
 
 
@@ -171,7 +172,7 @@ class Merge(bpy.types.Operator):
 
     def execute(self, context):
 
-        if core.merge_branch(tool, context, self):
+        if core.merge_branch(tool, btool.Ifc, self):
             return {"FINISHED"}
         else:
             return {"CANCELLED"}

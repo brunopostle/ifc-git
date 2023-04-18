@@ -2,15 +2,11 @@ import os
 import bpy
 import time
 
-from tool import (
-    repo_from_path,
-    branches_by_hexsha,
-    tags_by_hexsha,
-    is_valid_branch_name,
-)
+from tool import IfcGit 
 
 from data import IfcGitData
 
+import blenderbim.tool.ifc as ifc
 
 class IFCGIT_PT_panel(bpy.types.Panel):
     """Scene Properties panel to interact with IFC repository data"""
@@ -36,7 +32,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = layout.row()
         if path_ifc:
-            IfcGitData.data["repo"] = repo_from_path(path_ifc)
+            IfcGitData.data["repo"] = IfcGit.repo_from_path(path_ifc)
             if IfcGitData.data["repo"]:
                 name_ifc = os.path.relpath(
                     path_ifc, IfcGitData.data["repo"].working_dir
@@ -82,7 +78,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
                 )
                 row.prop(props, "new_branch_name")
-                if props.new_branch_name and not is_valid_branch_name(
+                if props.new_branch_name and not IfcGit.is_valid_branch_name(
                     props.new_branch_name
                 ):
                     row = layout.row()
@@ -165,14 +161,14 @@ class COMMIT_UL_List(bpy.types.UIList):
         current_revision = IfcGitData.data["repo"].commit()
         commit = IfcGitData.data["repo"].commit(rev=item.hexsha)
 
-        lookup = branches_by_hexsha(IfcGitData.data["repo"])
+        lookup = IfcGit.branches_by_hexsha(IfcGitData.data["repo"])
         refs = ""
         if item.hexsha in lookup:
             for branch in lookup[item.hexsha]:
                 if branch.name == props.display_branch:
                     refs = "[" + branch.name + "] "
 
-        lookup = tags_by_hexsha(IfcGitData.data["repo"])
+        lookup = IfcGit.tags_by_hexsha(IfcGitData.data["repo"])
         if item.hexsha in lookup:
             for tag in lookup[item.hexsha]:
                 refs += "{" + tag.name + "} "
