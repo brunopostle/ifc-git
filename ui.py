@@ -78,14 +78,14 @@ class IFCGIT_PT_panel(bpy.types.Panel):
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
                 )
                 row.prop(props, "new_branch_name")
-                if props.new_branch_name and not IfcGit.is_valid_branch_name(
-                    props.new_branch_name
-                ):
-                    row = layout.row()
-                    row.label(
-                        text="The new branch name is invalid, please insert a valid branch name (eg. with no spaces, ...)",
-                        icon="CANCEL",
-                    )
+                # if props.new_branch_name and not IfcGit.is_valid_branch_name(
+                #     props.new_branch_name
+                # ):
+                #     row = layout.row()
+                #     row.label(
+                #         text="The new branch name is invalid, please insert a valid branch name (eg. with no spaces, ...)",
+                #         icon="CANCEL",
+                #     )
 
             row = layout.row()
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")

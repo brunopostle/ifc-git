@@ -92,6 +92,7 @@ class CommitChanges(bpy.types.Operator):
                 in [branch.name for branch in repo.branches]
             )
         ):
+            cls.poll_message_set("The new branch name is invalid, please insert a valid branch name (eg. with no spaces, ...)")
             return False
         return True
 
