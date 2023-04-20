@@ -32,7 +32,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = layout.row()
         if path_ifc:
-            IfcGitData.data["repo"] = IfcGit.repo_from_path(path_ifc)
+            #IfcGitData.data["repo"] = IfcGit.repo_from_path(path_ifc)
             if IfcGitData.data["repo"]:
                 name_ifc = os.path.relpath(
                     path_ifc, IfcGitData.data["repo"].working_dir

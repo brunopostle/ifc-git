@@ -1,4 +1,6 @@
 import bpy
+import tool
+import blenderbim.tool as btool
 
 
 def refresh():
@@ -24,6 +26,9 @@ class IfcGitData:
 
     @classmethod
     def repo(cls):
+        path_ifc = btool.Ifc.get_path()
+        print("@@@@", path_ifc)
+        return tool.IfcGit.repo_from_path(path_ifc)
         pass
 
     @classmethod
@@ -32,4 +37,4 @@ class IfcGitData:
 
     @classmethod
     def path_ifc(cls):
-        return bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        return btool.Ifc.get_path()
