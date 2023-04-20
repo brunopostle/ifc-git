@@ -2,7 +2,7 @@ import os
 import bpy
 import time
 
-from tool import IfcGit 
+# from tool import IfcGit 
 
 from data import IfcGitData
 
@@ -78,15 +78,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
                 )
                 row.prop(props, "new_branch_name")
-                # if props.new_branch_name and not IfcGit.is_valid_branch_name(
-                #     props.new_branch_name
-                # ):
-                #     row = layout.row()
-                #     row.label(
-                #         text="The new branch name is invalid, please insert a valid branch name (eg. with no spaces, ...)",
-                #         icon="CANCEL",
-                #     )
-
+                
             row = layout.row()
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
 
@@ -161,14 +153,14 @@ class COMMIT_UL_List(bpy.types.UIList):
         current_revision = IfcGitData.data["repo"].commit()
         commit = IfcGitData.data["repo"].commit(rev=item.hexsha)
 
-        lookup = IfcGit.branches_by_hexsha(IfcGitData.data["repo"])
+        lookup = IfcGitData.data["branches_by_hexsha"]
         refs = ""
         if item.hexsha in lookup:
             for branch in lookup[item.hexsha]:
                 if branch.name == props.display_branch:
                     refs = "[" + branch.name + "] "
 
-        lookup = IfcGit.tags_by_hexsha(IfcGitData.data["repo"])
+        lookup = IfcGitData.data["tags_by_hexsha"]
         if item.hexsha in lookup:
             for tag in lookup[item.hexsha]:
                 refs += "{" + tag.name + "} "
