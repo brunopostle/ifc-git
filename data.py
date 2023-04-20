@@ -1,4 +1,5 @@
 import bpy
+import os
 import tool
 import blenderbim.tool as btool
 
@@ -22,7 +23,11 @@ class IfcGitData:
             "branch_names": cls.branch_names(),
             "path_ifc": cls.path_ifc(),
             "branches_by_hexsha": cls.branches_by_hexsha(),
-            "tags_by_hexsha": cls.tags_by_hexsha()
+            "tags_by_hexsha": cls.tags_by_hexsha(),
+            "name_ifc": cls.name_ifc(),
+            "dir_name": cls.dir_name(),
+            "base_name": cls.base_name(),
+            #"is_dirty": cls.is_dirty()
         }
         cls.is_loaded = True
 
@@ -48,3 +53,19 @@ class IfcGitData:
     @classmethod
     def tags_by_hexsha(cls):
         return tool.IfcGit.tags_by_hexsha(tool.IfcGitRepo.repo)
+
+    @classmethod
+    def name_ifc(cls):
+        path_ifc = btool.Ifc.get_path()
+        working_dir = tool.IfcGitRepo.repo.working_dir
+        return os.path.relpath(path_ifc, working_dir)
+
+    @classmethod
+    def dir_name(cls):
+        path_ifc = btool.Ifc.get_path()
+        return os.path.dirname(path_ifc)
+    
+    @classmethod
+    def base_name(cls):
+        path_ifc = btool.Ifc.get_path()
+        return os.path.basename(path_ifc)

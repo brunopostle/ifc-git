@@ -2,8 +2,6 @@ import os
 import bpy
 import time
 
-# from tool import IfcGit 
-
 from data import IfcGitData
 
 import blenderbim.tool.ifc as ifc
@@ -34,9 +32,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
         if path_ifc:
             #IfcGitData.data["repo"] = IfcGit.repo_from_path(path_ifc)
             if IfcGitData.data["repo"]:
-                name_ifc = os.path.relpath(
-                    path_ifc, IfcGitData.data["repo"].working_dir
-                )
+                name_ifc = IfcGitData.data["name_ifc"]
                 row.label(text=IfcGitData.data["repo"].working_dir, icon="SYSTEM")
                 if name_ifc in IfcGitData.data["repo"].untracked_files:
                     row.operator(
@@ -49,10 +45,10 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             else:
                 row.operator(
                     "ifcgit.createrepo",
-                    text="Create '" + os.path.dirname(path_ifc) + "' repository",
+                    text="Create '" + IfcGitData.data["dir_name"] + "' repository",
                     icon="SYSTEM",
                 )
-                row.label(text=os.path.basename(path_ifc), icon="FILE")
+                row.label(text=IfcGitData.data["base_name"], icon="FILE")
                 return
         else:
             row.label(text="No Git repository found", icon="SYSTEM")
