@@ -10,7 +10,7 @@ import blenderbim.tool as tool
 class IfcGit():
     @classmethod
     def init_repo(cls, path_dir):
-        git.Repo.init(path_dir)
+        IfcGitRepo.repo = git.Repo.init(path_dir)
 
     @classmethod
     def get_path_dir(cls, path_ifc):

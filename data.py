@@ -33,9 +33,7 @@ class IfcGitData:
 
     @classmethod
     def repo(cls):
-        path_ifc = btool.Ifc.get_path()
-        print("@@@@", path_ifc)
-        return tool.IfcGit.repo_from_path(path_ifc)
+        return tool.IfcGitRepo.repo
         pass
 
     @classmethod
@@ -48,17 +46,28 @@ class IfcGitData:
 
     @classmethod
     def branches_by_hexsha(cls):
-        return tool.IfcGit.branches_by_hexsha(tool.IfcGitRepo.repo)
+        if not tool.IfcGitRepo.repo:
+            print("!!!DATA - Dentro")
+            pass
+        else:
+            print("!!!DATA - Fora")
+            return tool.IfcGit.branches_by_hexsha(tool.IfcGitRepo.repo)
     
     @classmethod
     def tags_by_hexsha(cls):
-        return tool.IfcGit.tags_by_hexsha(tool.IfcGitRepo.repo)
+        if not tool.IfcGitRepo.repo:
+            pass
+        else:
+            return tool.IfcGit.tags_by_hexsha(tool.IfcGitRepo.repo)
 
     @classmethod
     def name_ifc(cls):
-        path_ifc = btool.Ifc.get_path()
-        working_dir = tool.IfcGitRepo.repo.working_dir
-        return os.path.relpath(path_ifc, working_dir)
+        if not tool.IfcGitRepo.repo:
+            pass
+        else:
+            path_ifc = btool.Ifc.get_path()
+            working_dir = tool.IfcGitRepo.repo.working_dir
+            return os.path.relpath(path_ifc, working_dir)
 
     @classmethod
     def dir_name(cls):
