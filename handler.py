@@ -2,5 +2,6 @@
 ### is in the correct folder structure
 import data
 
+
 def refresh_ui_data():
     data.refresh()

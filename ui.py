@@ -70,7 +70,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
                     text="HEAD is detached, commit will create a branch", icon="ERROR"
                 )
                 row.prop(props, "new_branch_name")
-                
+
             row = layout.row()
             row.operator("ifcgit.commit_changes", icon="GREASEPENCIL")
 
@@ -141,7 +141,7 @@ class COMMIT_UL_List(bpy.types.UIList):
     ):
 
         props = context.scene.IfcGitProperties
-        
+
         current_revision = IfcGitData.data["current_revision"]
 
         # TODO Figure how this "item" can be acesse in "data.py"

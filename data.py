@@ -28,7 +28,7 @@ class IfcGitData:
             "dir_name": cls.dir_name(),
             "base_name": cls.base_name(),
             "is_dirty": cls.is_dirty(),
-            "commit":cls.commit(),
+            "commit": cls.commit(),
             "current_revision": cls.current_revision(),
         }
         cls.is_loaded = True
@@ -56,7 +56,7 @@ class IfcGitData:
                 return tool.IfcGit.branches_by_hexsha(tool.IfcGitRepo.repo)
         except:
             pass
-    
+
     @classmethod
     def tags_by_hexsha(cls):
         if tool.IfcGitRepo.repo:
@@ -78,7 +78,7 @@ class IfcGitData:
             path_ifc = btool.Ifc.get_path()
             return os.path.dirname(path_ifc)
         return ""
-    
+
     @classmethod
     def base_name(cls):
         if bool(btool.Ifc.get()):
@@ -99,7 +99,7 @@ class IfcGitData:
         if len(props.ifcgit_commits) > 0:
             item = props.ifcgit_commits[props.commit_index]
             return tool.IfcGitRepo.repo.commit(rev=item.hexsha)
-        
+
     @classmethod
     def current_revision(cls):
         props = bpy.context.scene.IfcGitProperties

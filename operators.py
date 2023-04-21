@@ -7,7 +7,7 @@ from tool import IfcGit as tool
 from data import IfcGitData
 
 # TODO Remove all handler elements once in the correct folder structure
-import handler 
+import handler
 
 import blenderbim.tool as btool
 
@@ -98,7 +98,9 @@ class CommitChanges(bpy.types.Operator):
                 or props.new_branch_name in [branch.name for branch in repo.branches]
             )
         ):
-            cls.poll_message_set("The new branch name is invalid, please insert a valid branch name (eg. with no spaces, ...)")
+            cls.poll_message_set(
+                "The new branch name is invalid, please insert a valid branch name (eg. with no spaces, ...)"
+            )
             return False
         return True
 

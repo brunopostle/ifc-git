@@ -26,10 +26,7 @@ class IfcGit:
         else:
             return None
 
-        if (
-            IfcGitRepo.repo != None
-            and IfcGitRepo.repo.working_dir == path_dir
-        ):
+        if IfcGitRepo.repo != None and IfcGitRepo.repo.working_dir == path_dir:
             return IfcGitRepo.repo
 
         try:
@@ -306,7 +303,9 @@ class IfcGit:
         section = 'mergetool "ifcmerge"'
         if not config_reader.has_section(section):
             config_writer = IfcGitRepo.repo.config_writer()
-            config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
+            config_writer.set_value(
+                section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED"
+            )
             config_writer.set_value(section, "trustExitCode", True)
 
     @classmethod
@@ -344,6 +343,6 @@ class IfcGit:
 
             IfcGit.load_project(path_ifc)
 
-        
-class IfcGitRepo():
+
+class IfcGitRepo:
     repo = None
