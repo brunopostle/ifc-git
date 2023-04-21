@@ -1,4 +1,3 @@
-import os
 import bpy
 import time
 
@@ -30,7 +29,6 @@ class IFCGIT_PT_panel(bpy.types.Panel):
 
         row = layout.row()
         if path_ifc:
-            #IfcGitData.data["repo"] = IfcGit.repo_from_path(path_ifc)
             if IfcGitData.data["repo"]:
                 name_ifc = IfcGitData.data["name_ifc"]
                 row.label(text=IfcGitData.data["repo"].working_dir, icon="SYSTEM")
@@ -55,7 +53,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             row.label(text="No IFC project saved", icon="FILE")
             return
 
-        is_dirty = IfcGitData.data["repo"].is_dirty(path=path_ifc)
+        is_dirty = IfcGitData.data["is_dirty"]
 
         if is_dirty:
             row = layout.row()
@@ -122,8 +120,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             return
 
         item = props.ifcgit_commits[props.commit_index]
-        commit = IfcGitData.data["repo"].commit(rev=item.hexsha)
-
+        commit = IfcGitData.data["commit"]
         if not item.relevant:
             row = layout.row()
             row.label(text="Revision unrelated to current IFC project", icon="ERROR")
@@ -146,7 +143,11 @@ class COMMIT_UL_List(bpy.types.UIList):
     ):
 
         props = context.scene.IfcGitProperties
-        current_revision = IfcGitData.data["repo"].commit()
+        
+        current_revision = IfcGitData.data["current_revision"]
+
+        # TODO Figure how this "item" can be acesse in "data.py"
+        # so it's possible to move the ".commit"
         commit = IfcGitData.data["repo"].commit(rev=item.hexsha)
 
         lookup = IfcGitData.data["branches_by_hexsha"]

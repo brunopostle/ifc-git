@@ -3,5 +3,4 @@
 import data
 
 def refresh_ui_data():
-    print("$$$", "HANDLER")
     data.refresh()

@@ -353,6 +353,7 @@ class IfcGit():
             props.display_branch = repo.active_branch.name
 
             IfcGit.load_project(path_ifc)
+
         
 class IfcGitRepo():
     repo = None
