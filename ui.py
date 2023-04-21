@@ -1,10 +1,5 @@
 import bpy
 import time
-
-<<<<<<< HEAD
-from tool import IfcGit
-=======
->>>>>>> ui-logic
 from data import IfcGitData
 
 

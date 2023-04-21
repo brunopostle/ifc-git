@@ -5,8 +5,6 @@ import bpy
 from blenderbim.bim.ifc import IfcStore
 import blenderbim.tool as tool
 
-#from data import IfcGitData
-
 
 class IfcGit:
     @classmethod
@@ -298,13 +296,7 @@ class IfcGit:
         """Check if a branch name is valid and doesn't conflict with existing branches"""
         if not IfcGit.is_valid_ref_format(new_branch_name):
             return False
-<<<<<<< HEAD
-        if new_branch_name in [
-            branch.name for branch in IfcGitData.data["repo"].branches
-        ]:
-=======
         if new_branch_name in [branch.name for branch in IfcGitRepo.repo.branches]:
->>>>>>> ui-logic
             return False
         return True
 
@@ -313,15 +305,8 @@ class IfcGit:
         config_reader = IfcGitRepo.repo.config_reader()
         section = 'mergetool "ifcmerge"'
         if not config_reader.has_section(section):
-<<<<<<< HEAD
-            config_writer = IfcGitData.data["repo"].config_writer()
-            config_writer.set_value(
-                section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED"
-            )
-=======
             config_writer = IfcGitRepo.repo.config_writer()
             config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
->>>>>>> ui-logic
             config_writer.set_value(section, "trustExitCode", True)
 
     @classmethod
@@ -358,10 +343,7 @@ class IfcGit:
             props.display_branch = repo.active_branch.name
 
             IfcGit.load_project(path_ifc)
-<<<<<<< HEAD
-=======
 
         
 class IfcGitRepo():
     repo = None
->>>>>>> ui-logic
