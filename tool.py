@@ -5,13 +5,13 @@ import bpy
 from blenderbim.bim.ifc import IfcStore
 import blenderbim.tool as tool
 
-from data import IfcGitData
+#from data import IfcGitData
 
 
 class IfcGit:
     @classmethod
     def init_repo(cls, path_dir):
-        git.Repo.init(path_dir)
+        IfcGitRepo.repo = git.Repo.init(path_dir)
 
     @classmethod
     def get_path_dir(cls, path_ifc):
@@ -29,10 +29,10 @@ class IfcGit:
             return None
 
         if (
-            IfcGitData.data["repo"] != None
-            and IfcGitData.data["repo"].working_dir == path_dir
+            IfcGitRepo.repo != None
+            and IfcGitRepo.repo.working_dir == path_dir
         ):
-            return IfcGitData.data["repo"]
+            return IfcGitRepo.repo
 
         try:
             repo = git.Repo(path_dir)
@@ -43,7 +43,7 @@ class IfcGit:
                 return None
             return IfcGit.repo_from_path(parentdir_path)
         if repo:
-            IfcGitData.data["repo"] = repo
+            IfcGitRepo.repo = repo
         return repo
 
     @classmethod
@@ -56,12 +56,12 @@ class IfcGit:
 
     @classmethod
     def git_checkout(cls, path_ifc):
-        IfcGitData.data["repo"].git.checkout(path_ifc)
+        IfcGitRepo.repo.git.checkout(path_ifc)
 
     @classmethod
     def git_commit(cls, path_ifc):
         props = bpy.context.scene.IfcGitProperties
-        repo = IfcGitData.data["repo"]
+        repo = IfcGitRepo.repo
         repo.index.add(path_ifc)
         repo.index.commit(message=props.commit_message)
         props.commit_message = ""
@@ -70,7 +70,7 @@ class IfcGit:
     @classmethod
     def create_new_branch(cls):
         props = bpy.context.scene.IfcGitProperties
-        repo = IfcGitData.data["repo"]
+        repo = IfcGitRepo.repo
         new_branch = repo.create_head(props.new_branch_name)
         new_branch.checkout()
         props.display_branch = props.new_branch_name
@@ -93,13 +93,13 @@ class IfcGit:
         props = bpy.context.scene.IfcGitProperties
         commits = list(
             git.objects.commit.Commit.iter_items(
-                repo=IfcGitData.data["repo"],
+                repo=IfcGitRepo.repo,
                 rev=[props.display_branch],
             )
         )
         commits_relevant = list(
             git.objects.commit.Commit.iter_items(
-                repo=IfcGitData.data["repo"],
+                repo=IfcGitRepo.repo,
                 rev=[props.display_branch],
                 paths=[path_ifc],
             )
@@ -199,7 +199,7 @@ class IfcGit:
 
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
         props = bpy.context.scene.IfcGitProperties
-        repo = IfcGitData.data["repo"]
+        repo = IfcGitRepo.repo
         item = props.ifcgit_commits[props.commit_index]
 
         selected_revision = repo.commit(rev=item.hexsha)
@@ -272,7 +272,7 @@ class IfcGit:
     @classmethod
     def switch_to_revision_item(cls):
         props = bpy.context.scene.IfcGitProperties
-        repo = IfcGitData.data["repo"]
+        repo = IfcGitRepo.repo
         item = props.ifcgit_commits[props.commit_index]
 
         lookup = IfcGit.branches_by_hexsha(repo)
@@ -298,27 +298,36 @@ class IfcGit:
         """Check if a branch name is valid and doesn't conflict with existing branches"""
         if not IfcGit.is_valid_ref_format(new_branch_name):
             return False
+<<<<<<< HEAD
         if new_branch_name in [
             branch.name for branch in IfcGitData.data["repo"].branches
         ]:
+=======
+        if new_branch_name in [branch.name for branch in IfcGitRepo.repo.branches]:
+>>>>>>> ui-logic
             return False
         return True
 
     @classmethod
     def config_ifcmerge(cls):
-        config_reader = IfcGitData.data["repo"].config_reader()
+        config_reader = IfcGitRepo.repo.config_reader()
         section = 'mergetool "ifcmerge"'
         if not config_reader.has_section(section):
+<<<<<<< HEAD
             config_writer = IfcGitData.data["repo"].config_writer()
             config_writer.set_value(
                 section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED"
             )
+=======
+            config_writer = IfcGitRepo.repo.config_writer()
+            config_writer.set_value(section, "cmd", "ifcmerge $BASE $LOCAL $REMOTE $MERGED")
+>>>>>>> ui-logic
             config_writer.set_value(section, "trustExitCode", True)
 
     @classmethod
     def execute_merge(cls, path_ifc, operator):
         props = bpy.context.scene.IfcGitProperties
-        repo = IfcGitData.data["repo"]
+        repo = IfcGitRepo.repo
         item = props.ifcgit_commits[props.commit_index]
         lookup = IfcGit.branches_by_hexsha(repo)
         if item.hexsha in lookup:
@@ -349,3 +358,10 @@ class IfcGit:
             props.display_branch = repo.active_branch.name
 
             IfcGit.load_project(path_ifc)
+<<<<<<< HEAD
+=======
+
+        
+class IfcGitRepo():
+    repo = None
+>>>>>>> ui-logic
