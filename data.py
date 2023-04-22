@@ -1,5 +1,6 @@
 import bpy
 import os
+import shutil
 import tool
 import blenderbim.tool as btool
 
@@ -27,6 +28,8 @@ class IfcGitData:
             "is_dirty": cls.is_dirty(),
             "commit": cls.commit(),
             "current_revision": cls.current_revision(),
+            "git_exe": cls.git_exe(),
+            "ifcmerge_exe": cls.ifcmerge_exe(),
         }
         cls.is_loaded = True
 
@@ -89,7 +92,7 @@ class IfcGitData:
 
     @classmethod
     def is_dirty(cls):
-        if tool.IfcGitRepo.repo:
+        if tool.IfcGitRepo.repo and cls.git_exe():
             path_ifc = btool.Ifc.get_path()
             return tool.IfcGitRepo.repo.is_dirty(path=path_ifc)
         return False
@@ -106,3 +109,11 @@ class IfcGitData:
         props = bpy.context.scene.IfcGitProperties
         if len(props.ifcgit_commits) > 0:
             return tool.IfcGitRepo.repo.commit()
+
+    @classmethod
+    def git_exe(cls):
+        return shutil.which("git")
+
+    @classmethod
+    def ifcmerge_exe(cls):
+        return shutil.which("ifcmerge")

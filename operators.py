@@ -184,6 +184,12 @@ class Merge(bpy.types.Operator):
     bl_idname = "ifcgit.merge"
     bl_options = {"REGISTER"}
 
+    @classmethod
+    def poll(cls, context):
+        if IfcGitData.data["ifcmerge_exe"]:
+            return True
+        return False
+
     def execute(self, context):
 
         if core.merge_branch(tool, btool.Ifc, self):

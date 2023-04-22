@@ -21,6 +21,11 @@ class IFCGIT_PT_panel(bpy.types.Panel):
         layout = self.layout
         path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
 
+        if not IfcGitData.data["git_exe"]:
+            row = layout.row()
+            row.label(text="Git is not installed", icon="ERROR")
+            return
+
         props = context.scene.IfcGitProperties
 
         # TODO if file isn't saved, offer to save to disk

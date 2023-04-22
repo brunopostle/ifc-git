@@ -1,5 +1,8 @@
 import os
 import re
+
+# allows git import even if git executable isn't found
+os.environ["GIT_PYTHON_REFRESH"] = "quiet"
 import git
 import bpy
 from blenderbim.bim.ifc import IfcStore
