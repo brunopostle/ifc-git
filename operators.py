@@ -21,10 +21,10 @@ class CreateRepo(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        path_ifc = IfcGitData.data["path_ifc"]
         if not os.path.isfile(path_ifc):
             return False
-        if tool.repo_from_path(path_ifc):
+        if IfcGitData.data["repo"]:
             # repo already exists
             return False
         if re.match("^/home/[^/]+/?$", os.path.dirname(path_ifc)):
@@ -48,10 +48,10 @@ class AddFileToRepo(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        path_ifc = IfcGitData.data["path_ifc"]
         if not os.path.isfile(path_ifc):
             return False
-        if not tool.repo_from_path(path_ifc):
+        if not IfcGitData.data["repo"]:
             # repo doesn't exist
             return False
         return True

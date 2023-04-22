@@ -19,7 +19,7 @@ class IFCGIT_PT_panel(bpy.types.Panel):
             IfcGitData.load()
 
         layout = self.layout
-        path_ifc = bpy.data.scenes["Scene"].BIMProperties.ifc_file
+        path_ifc = IfcGitData.data["path_ifc"]
 
         if not IfcGitData.data["git_exe"]:
             row = layout.row()

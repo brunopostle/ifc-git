@@ -45,22 +45,22 @@ class IfcGit:
         return repo
 
     @classmethod
-    def add_file_to_repo(cls, repo, path_ifc):
-        repo.index.add(path_ifc)
+    def add_file_to_repo(cls, repo, path_file):
+        repo.index.add(path_file)
         repo.index.commit(
-            message="Added " + os.path.relpath(path_ifc, repo.working_dir)
+            message="Added " + os.path.relpath(path_file, repo.working_dir)
         )
         bpy.ops.ifcgit.refresh()
 
     @classmethod
-    def git_checkout(cls, path_ifc):
-        IfcGitRepo.repo.git.checkout(path_ifc)
+    def git_checkout(cls, path_file):
+        IfcGitRepo.repo.git.checkout(path_file)
 
     @classmethod
-    def git_commit(cls, path_ifc):
+    def git_commit(cls, path_file):
         props = bpy.context.scene.IfcGitProperties
         repo = IfcGitRepo.repo
-        repo.index.add(path_ifc)
+        repo.index.add(path_file)
         repo.index.commit(message=props.commit_message)
         props.commit_message = ""
         return repo
