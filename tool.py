@@ -133,6 +133,11 @@ class IfcGit:
         for collection in bpy.data.collections:
             if re.match("^IfcProject/", collection.name):
                 IfcGit.delete_collection(collection)
+        # delete any Ifc* objects not in IfcProject/ heirarchy
+        for obj in bpy.data.objects:
+            if re.match("^Ifc", obj.name):
+                bpy.data.objects.remove(obj, do_unlink=True)
+
         bpy.data.orphans_purge(do_recursive=True)
 
         bpy.ops.bim.load_project(filepath=path_ifc)
