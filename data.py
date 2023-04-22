@@ -13,9 +13,6 @@ class IfcGitData:
     data = {}
     is_loaded = False
 
-    data["repo"] = None
-    data["branch_names"] = []
-
     @classmethod
     def load(cls):
         cls.data = {
@@ -37,13 +34,15 @@ class IfcGitData:
     def repo(cls):
         if bool(btool.Ifc.get()):
             path_ifc = btool.Ifc.get_path()
+            if not os.path.isfile(path_ifc):
+                return None
             return tool.IfcGit.repo_from_path(path_ifc)
         else:
             return tool.IfcGitRepo.repo
 
     @classmethod
     def branch_names(cls):
-        pass
+        return []
 
     @classmethod
     def path_ifc(cls):
@@ -55,13 +54,13 @@ class IfcGitData:
             if tool.IfcGitRepo.repo.branches:
                 return tool.IfcGit.branches_by_hexsha(tool.IfcGitRepo.repo)
         except:
-            pass
+            return {}
 
     @classmethod
     def tags_by_hexsha(cls):
         if tool.IfcGitRepo.repo:
             return tool.IfcGit.tags_by_hexsha(tool.IfcGitRepo.repo)
-        pass
+        return {}
 
     @classmethod
     def name_ifc(cls):
@@ -70,28 +69,30 @@ class IfcGitData:
         if tool.IfcGitRepo.repo:
             working_dir = tool.IfcGitRepo.repo.working_dir
             return os.path.relpath(path_ifc, working_dir)
-        pass
+        return None
 
     @classmethod
     def dir_name(cls):
         if bool(btool.Ifc.get()):
             path_ifc = btool.Ifc.get_path()
+            if not os.path.isfile(path_ifc):
+                return None
             return os.path.dirname(path_ifc)
-        return ""
+        return None
 
     @classmethod
     def base_name(cls):
         if bool(btool.Ifc.get()):
             path_ifc = btool.Ifc.get_path()
             return os.path.basename(path_ifc)
-        return ""
+        return None
 
     @classmethod
     def is_dirty(cls):
         if tool.IfcGitRepo.repo:
             path_ifc = btool.Ifc.get_path()
             return tool.IfcGitRepo.repo.is_dirty(path=path_ifc)
-        pass
+        return False
 
     @classmethod
     def commit(cls):
