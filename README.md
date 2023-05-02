@@ -1,7 +1,7 @@
 # ifc-git
 *BlenderBIM Git support*
 
-This is a prototype add-on, with the intention that something like this will be rolled into BlenderBIM.
+**IMPORTANT NOTE, GIT SUPPORT IS NOW IN BLENDERBIM, THIS REPOSITORY IS DEFUNCT**
 
 ## Installation
 
